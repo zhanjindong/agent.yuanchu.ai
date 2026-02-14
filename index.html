@@ -5,186 +5,552 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent YUANCHU.AI - Multi-Agent Collaboration</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
-            font-family: 'Segoe UI', 'PingFang SC', sans-serif;
-            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000;
             color: #fff;
+            min-height: 100vh;
             overflow-x: hidden;
         }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        header { text-align: center; padding: 40px 20px; }
-        h1 { font-size: 2.5rem; background: linear-gradient(90deg, #00ff88, #00ccff, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
-        .subtitle { color: #888; font-size: 1.1rem; }
-        .agents-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; padding: 40px 0; }
-        .agent-card {
-            background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);
-            border-radius: 20px; padding: 30px; text-align: center;
-            border: 1px solid rgba(255,255,255,0.1);
-            transition: all 0.3s; position: relative; overflow: hidden;
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
         }
-        .agent-card:hover { transform: translateY(-10px); border-color: rgba(0,255,136,0.3); box-shadow: 0 20px 40px rgba(0,255,136,0.1); }
-        .agent-card::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, var(--c1), var(--c2));
+        .content {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 40px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+        .logo {
+            font-size: 14px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 40px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+        h1 {
+            font-size: 48px;
+            font-weight: 300;
+            letter-spacing: 12px;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fff 0%, #888 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 8px;
+            text-transform: uppercase;
+        }
+        .section-title {
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .agents-section {
+            margin-bottom: 100px;
+        }
+        .agents-grid {
+            display: flex;
+            justify-content: center;
+            flex-wrap: nowrap;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+        .agent-card {
+            flex: 0 0 200px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 25px 20px;
+            transition: all 0.3s;
+            position: relative;
+            text-align: center;
+        }
+        .agent-card:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-4px);
+        }
+        .agent-card.coordinator {
+            flex: 0 0 280px;
+            border-color: rgba(155,89,182,0.4);
+            background: rgba(155,89,182,0.05);
+        }
+        .agent-card.coordinator::before {
+            content: 'COORDINATOR';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: #fff;
+            font-size: 9px;
+            padding: 4px 12px;
+            border-radius: 10px;
+            letter-spacing: 1px;
         }
         .agent-icon {
-            width: 80px; height: 80px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 2.5rem; margin: 0 auto 20px;
-            background: linear-gradient(135deg, var(--c1), var(--c2));
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            margin: 0 auto 15px;
+            background: var(--gradient);
+        }
+        .agent-name {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+        .agent-role {
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+        .agent-desc {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.7;
+            text-align: left;
+        }
+        .agent-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 15px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .agent-status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--status-color, #00ff88);
+            border-radius: 50%;
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--rgb), 0.4); }
-            50% { transform: scale(1.05); box-shadow: 0 0 20px 10px rgba(var(--rgb), 0); }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
         }
-        .agent-name { font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--c1); }
-        .agent-role { color: #888; font-size: 0.9rem; margin-bottom: 15px; }
-        .agent-desc { color: #aaa; font-size: 0.85rem; line-height: 1.6; }
-        .agent-status {
-            display: inline-flex; align-items: center; gap: 8px; margin-top: 15px;
-            padding: 8px 16px; background: rgba(0,255,136,0.1);
-            border-radius: 20px; font-size: 0.8rem; color: #00ff88;
+        .workflow-section {
+            margin-bottom: 100px;
+            padding: 60px 40px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 16px;
         }
-        .agent-status::before {
-            content: ''; width: 8px; height: 8px; background: #00ff88;
-            border-radius: 50%; animation: blink 1s infinite;
+        .workflow-diagram {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
         }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .collaboration-diagram { margin: 60px 0; padding: 40px; background: rgba(255,255,255,0.02); border-radius: 30px; }
-        .diagram-title { text-align: center; font-size: 1.5rem; margin-bottom: 40px; color: #00ccff; }
-        .flow-diagram { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 20px; }
-        .flow-item { display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .flow-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 10px; }
-        .flow-label { font-size: 0.85rem; color: #888; }
-        .flow-arrow { font-size: 1.5rem; color: #00ff88; }
-        .activity-feed { margin: 60px 0; }
-        .feed-title { font-size: 1.5rem; margin-bottom: 30px; color: #00ccff; }
-        .activity-list { display: flex; flex-direction: column; gap: 15px; }
+        .workflow-step {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+        .workflow-center {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .workflow-coordinator {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(155,89,182,0.4), rgba(155,89,182,0.1));
+            border: 3px solid rgba(155,89,182,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            box-shadow: 0 0 40px rgba(155,89,182,0.4);
+            z-index: 2;
+        }
+        .workflow-arrow {
+            width: 2px;
+            height: 40px;
+            background: linear-gradient(180deg, rgba(155,89,182,0.5), transparent);
+            position: relative;
+        }
+        .workflow-arrow::after {
+            content: '▼';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(155,89,182,0.5);
+            font-size: 10px;
+        }
+        .workflow-branch {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .workflow-agent {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .workflow-agent-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            background: var(--gradient);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .workflow-agent-name {
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 1px;
+        }
+        .workflow-label {
+            text-align: center;
+            padding: 20px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            letter-spacing: 2px;
+            line-height: 1.8;
+        }
+        .activity-section {
+            margin-bottom: 60px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .activity-title {
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
         .activity-item {
-            display: flex; align-items: center; gap: 20px; padding: 20px;
-            background: rgba(255,255,255,0.03); border-radius: 15px; border-left: 3px solid;
-            animation: slideIn 0.5s ease;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 18px 20px;
+            background: rgba(255,255,255,0.02);
+            border-left: 2px solid var(--color);
+            transition: all 0.3s;
+            animation: fadeIn 0.5s ease;
+            border-radius: 0 8px 8px 0;
         }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-        .activity-time { color: #666; font-size: 0.8rem; min-width: 80px; }
-        .activity-agent { padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; }
-        .activity-content { color: #ccc; flex: 1; }
-        footer { text-align: center; padding: 40px; color: #555; font-size: 0.85rem; }
-        footer a { color: #00ccff; text-decoration: none; }
-        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; overflow: hidden; }
-        .particle { position: absolute; width: 4px; height: 4px; background: rgba(0,255,136,0.3); border-radius: 50%; animation: float 15s infinite; }
-        @keyframes float { 0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; } }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .activity-item:hover {
+            background: rgba(255,255,255,0.04);
+        }
+        .activity-time {
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            min-width: 60px;
+            letter-spacing: 1px;
+        }
+        .activity-agent {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+            min-width: 140px;
+            letter-spacing: 1px;
+        }
+        .activity-content {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            flex: 1;
+        }
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: rgba(255,255,255,0.25);
+            font-size: 11px;
+            letter-spacing: 2px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        footer a {
+            color: rgba(255,255,255,0.4);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        footer a:hover {
+            color: #fff;
+        }
+        @media (max-width: 768px) {
+            h1 { font-size: 32px; letter-spacing: 8px; }
+            .content { padding: 60px 20px; }
+            .workflow-branch { gap: 20px; }
+        }
     </style>
 </head>
 <body>
-    <div class="particles" id="particles"></div>
-    <div class="container">
+    <canvas id="canvas"></canvas>
+    <div class="content">
         <header>
-            <h1>🤖 Agent YUANCHU.AI</h1>
+            <div class="logo">YUANCHU.AI</div>
+            <h1>AGENT</h1>
             <p class="subtitle">Multi-Agent Collaboration Platform</p>
         </header>
-        <div class="agents-grid">
-            <div class="agent-card" style="--c1: #ff6b6b; --c2: #ffa502; --rgb: 255,107,107;">
-                <div class="agent-icon">📋</div>
-                <div class="agent-name">Product Agent</div>
-                <div class="agent-role">产品经理</div>
-                <div class="agent-desc">需求分析、产品规划、用户研究、功能设计</div>
-                <div class="agent-status">活跃运行中</div>
+
+        <section class="agents-section">
+            <h2 class="section-title">Agents</h2>
+            <div class="agents-grid">
+                <div class="agent-card coordinator" style="--gradient: linear-gradient(135deg, #9b59b6, #8e44ad); --status-color: #9b59b6;">
+                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #9b59b6, #8e44ad);">🎯</div>
+                    <div class="agent-name">Coordinator</div>
+                    <div class="agent-role">协调者</div>
+                    <p class="agent-desc">理解任务意图，规划执行流程，分派工作给专业 agent，汇总结果</p>
+                    <span class="agent-status">协调中</span>
+                </div>
+                <div class="agent-card" style="--gradient: linear-gradient(135deg, #00ff88, #00ccff); --status-color: #00ff88;">
+                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #00ff88, #00ccff);">💻</div>
+                    <div class="agent-name">Coder</div>
+                    <div class="agent-role">开发</div>
+                    <p class="agent-desc">代码编写、调试、重构、技术方案</p>
+                    <span class="agent-status">待命中</span>
+                </div>
+                <div class="agent-card" style="--gradient: linear-gradient(135deg, #3498db, #2ecc71); --status-color: #3498db;">
+                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #3498db, #2ecc71);">🔍</div>
+                    <div class="agent-name">Researcher</div>
+                    <div class="agent-role">研究</div>
+                    <p class="agent-desc">信息检索、资料整理、技术调研</p>
+                    <span class="agent-status">待命中</span>
+                </div>
+                <div class="agent-card" style="--gradient: linear-gradient(135deg, #e74c3c, #f39c12); --status-color: #e74c3c;">
+                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #e74c3c, #f39c12);">✍️</div>
+                    <div class="agent-name">Writer</div>
+                    <div class="agent-role">写作</div>
+                    <p class="agent-desc">文档撰写、内容编辑、报告生成</p>
+                    <span class="agent-status">待命中</span>
+                </div>
+                <div class="agent-card" style="--gradient: linear-gradient(135deg, #00ccff, #9b59b6); --status-color: #00ccff;">
+                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #00ccff, #9b59b6);">🧪</div>
+                    <div class="agent-name">Tester</div>
+                    <div class="agent-role">测试</div>
+                    <p class="agent-desc">测试用例、代码审查、质量保障</p>
+                    <span class="agent-status">待命中</span>
+                </div>
             </div>
-            <div class="agent-card" style="--c1: #00ff88; --c2: #00ccff; --rgb: 0,255,136;">
-                <div class="agent-icon">💻</div>
-                <div class="agent-name">Dev Agent</div>
-                <div class="agent-role">开发助手</div>
-                <div class="agent-desc">代码编写、技术方案、系统设计、API开发</div>
-                <div class="agent-status">活跃运行中</div>
+        </section>
+
+        <section class="workflow-section">
+            <h2 class="section-title">Workflow</h2>
+            <div class="workflow-diagram">
+                <div class="workflow-step">
+                    <div class="workflow-center">
+                        <div class="workflow-coordinator">🎯</div>
+                        <p style="font-size: 10px; color: rgba(155,89,182,0.8); margin-top: 10px; letter-spacing: 1px;">COORDINATOR</p>
+                    </div>
+                </div>
+                
+                <div class="workflow-arrow"></div>
+                
+                <div class="workflow-label">接收任务 → 分析意图 → 规划执行</div>
+                
+                <div class="workflow-arrow"></div>
+                
+                <div class="workflow-branch">
+                    <div class="workflow-agent">
+                        <div class="workflow-agent-icon" style="--gradient: linear-gradient(135deg, #00ff88, #00ccff);">💻</div>
+                        <span class="workflow-agent-name">Coder</span>
+                    </div>
+                    <div class="workflow-agent">
+                        <div class="workflow-agent-icon" style="--gradient: linear-gradient(135deg, #3498db, #2ecc71);">🔍</div>
+                        <span class="workflow-agent-name">Researcher</span>
+                    </div>
+                    <div class="workflow-agent">
+                        <div class="workflow-agent-icon" style="--gradient: linear-gradient(135deg, #e74c3c, #f39c12);">✍️</div>
+                        <span class="workflow-agent-name">Writer</span>
+                    </div>
+                    <div class="workflow-agent">
+                        <div class="workflow-agent-icon" style="--gradient: linear-gradient(135deg, #00ccff, #9b59b6);">🧪</div>
+                        <span class="workflow-agent-name">Tester</span>
+                    </div>
+                </div>
+                
+                <div class="workflow-label">Coordinator 根据任务类型指派合适的 Agent</div>
+                
+                <div class="workflow-arrow"></div>
+                
+                <div class="workflow-step">
+                    <div class="workflow-center">
+                        <div class="workflow-coordinator" style="width: 80px; height: 80px; font-size: 1.8rem;">📋</div>
+                        <p style="font-size: 10px; color: rgba(155,89,182,0.8); margin-top: 10px; letter-spacing: 1px;">RESULT</p>
+                    </div>
+                </div>
+                
+                <div class="workflow-label">Agent 完成工作 → 返回 Coordinator → 汇总输出</div>
             </div>
-            <div class="agent-card" style="--c1: #00ccff; --c2: #5f27cd; --rgb: 0,204,255;">
-                <div class="agent-icon">🧪</div>
-                <div class="agent-name">Test Agent</div>
-                <div class="agent-role">测试工程师</div>
-                <div class="agent-desc">自动化测试、质量保障、Bug追踪、回归验证</div>
-                <div class="agent-status">活跃运行中</div>
-            </div>
-            <div class="agent-card" style="--c1: #ffa502; --c2: #ff6b6b; --rgb: 255,165,2;">
-                <div class="agent-icon">📊</div>
-                <div class="agent-name">Stock Agent</div>
-                <div class="agent-role">股票助手</div>
-                <div class="agent-desc">行情监控、数据分析、投资建议、市场动态</div>
-                <div class="agent-status">活跃运行中</div>
-            </div>
-        </div>
-        <div class="collaboration-diagram">
-            <h2 class="diagram-title">🔄 Agent 协作流程</h2>
-            <div class="flow-diagram">
-                <div class="flow-item"><div class="flow-icon" style="background: linear-gradient(135deg, #ff6b6b, #ffa502);">📋</div><span class="flow-label">产品规划</span></div>
-                <span class="flow-arrow">→</span>
-                <div class="flow-item"><div class="flow-icon" style="background: linear-gradient(135deg, #00ff88, #00ccff);">💻</div><span class="flow-label">开发实现</span></div>
-                <span class="flow-arrow">→</span>
-                <div class="flow-item"><div class="flow-icon" style="background: linear-gradient(135deg, #00ccff, #5f27cd);">🧪</div><span class="flow-label">测试验证</span></div>
-                <span class="flow-arrow">→</span>
-                <div class="flow-item"><div class="flow-icon" style="background: linear-gradient(135deg, #5f27cd, #ff6b6b);">🚀</div><span class="flow-label">部署上线</span></div>
-            </div>
-        </div>
-        <div class="activity-feed">
-            <h2 class="feed-title">⚡ 实时交互动态</h2>
+        </section>
+
+        <section class="activity-section">
+            <h2 class="activity-title">Activity</h2>
             <div class="activity-list" id="activityList">
-                <div class="activity-item" style="border-left-color: #00ff88;">
-                    <span class="activity-time">现在</span>
-                    <span class="activity-agent" style="background: rgba(0,255,136,0.2); color: #00ff88;">💻 Dev Agent</span>
-                    <span class="activity-content">完成用户模块开发，提交代码到 main 分支</span>
+                <div class="activity-item" style="--color: #9b59b6;">
+                    <span class="activity-time">刚刚</span>
+                    <span class="activity-agent">🎯 Coordinator</span>
+                    <span class="activity-content">接收到任务：开发用户认证模块</span>
                 </div>
-                <div class="activity-item" style="border-left-color: #ff6b6b;">
+                <div class="activity-item" style="--color: #9b59b6;">
+                    <span class="activity-time">刚刚</span>
+                    <span class="activity-agent">🎯 Coordinator</span>
+                    <span class="activity-content">分析任务，指派 Coder 执行开发工作</span>
+                </div>
+                <div class="activity-item" style="--color: #00ff88;">
+                    <span class="activity-time">1分钟前</span>
+                    <span class="activity-agent">💻 Coder</span>
+                    <span class="activity-content">完成用户登录接口开发，提交代码</span>
+                </div>
+                <div class="activity-item" style="--color: #9b59b6;">
                     <span class="activity-time">2分钟前</span>
-                    <span class="activity-agent" style="background: rgba(255,107,107,0.2); color: #ff6b6b;">📋 Product Agent</span>
-                    <span class="activity-content">更新需求文档，添加用户反馈功能</span>
-                </div>
-                <div class="activity-item" style="border-left-color: #00ccff;">
-                    <span class="activity-time">5分钟前</span>
-                    <span class="activity-agent" style="background: rgba(0,204,255,0.2); color: #00ccff;">🧪 Test Agent</span>
-                    <span class="activity-content">执行自动化测试用例，通过率 98.5%</span>
-                </div>
-                <div class="activity-item" style="border-left-color: #ffa502;">
-                    <span class="activity-time">8分钟前</span>
-                    <span class="activity-agent" style="background: rgba(255,165,2,0.2); color: #ffa502;">📊 Stock Agent</span>
-                    <span class="activity-content">监控到股票波动，推送告警通知</span>
+                    <span class="activity-agent">🎯 Coordinator</span>
+                    <span class="activity-content">收到 Coder 结果，汇总并输出最终方案</span>
                 </div>
             </div>
-        </div>
+        </section>
+
         <footer>
             <p>Powered by Multi-Agent AI Technology</p>
-            <p><a href="https://yuanchu.ai">YUANCHU.AI</a> | <a href="https://github.com/zhanjindong">GitHub</a></p>
+            <p style="margin-top: 15px;">
+                <a href="https://yuanchu.ai">YUANCHU.AI</a> &nbsp;|&nbsp;
+                <a href="https://github.com/zhanjindong/agent.yuanchu.ai">GitHub</a>
+            </p>
         </footer>
     </div>
+
     <script>
-        function createParticles() {
-            for (let i = 0; i < 50; i++) {
-                const p = document.createElement('div');
-                p.className = 'particle';
-                p.style.left = Math.random() * 100 + '%';
-                p.style.animationDelay = Math.random() * 15 + 's';
-                document.getElementById('particles').appendChild(p);
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        const particleCount = 60;
+        let mouseX = 0, mouseY = 0;
+        let targetX = 0, targetY = 0;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.2;
+                this.speedY = (Math.random() - 0.5) * 0.2;
+                this.alpha = Math.random() * 0.3 + 0.1;
+            }
+            update() {
+                this.x += this.speedX + (targetX - width/2) * 0.00003;
+                this.y += this.speedY + (targetY - height/2) * 0.00003;
+                if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
+                    this.reset();
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,255,255,${this.alpha})`;
+                ctx.fill();
             }
         }
-        createParticles();
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.fillRect(0, 0, width, height);
+            targetX += (mouseX - targetX) * 0.05;
+            targetY += (mouseY - targetY) * 0.05;
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
         const activities = [
-            { agent: 'Product Agent', color: '#ff6b6b', icon: '📋', msg: '完成新功能需求分析' },
-            { agent: 'Dev Agent', color: '#00ff88', icon: '💻', msg: '修复线上Bug，发布热修复' },
-            { agent: 'Test Agent', color: '#00ccff', icon: '🧪', msg: '完成集成测试，生成测试报告' },
-            { agent: 'Stock Agent', color: '#ffa502', icon: '📊', msg: '生成每日股票分析报告' },
+            { agent: '🎯 Coordinator', color: '#9b59b6', msg: '接收到新任务，开始分析规划' },
+            { agent: '💻 Coder', color: '#00ff88', msg: '收到开发任务，开始编写代码' },
+            { agent: '🔍 Researcher', color: '#3498db', msg: '收到调研任务，开始信息检索' },
+            { agent: '✍️ Writer', color: '#e74c3c', msg: '收到写作任务，开始撰写文档' },
+            { agent: '🧪 Tester', color: '#00ccff', msg: '收到测试任务，开始编写测试用例' },
+            { agent: '🎯 Coordinator', color: '#9b59b6', msg: '汇总各 Agent 结果，输出最终方案' },
         ];
+
         function addActivity() {
             const a = activities[Math.floor(Math.random() * activities.length)];
             const item = document.createElement('div');
             item.className = 'activity-item';
-            item.style.borderLeftColor = a.color;
-            item.innerHTML = `<span class="activity-time">刚刚</span><span class="activity-agent" style="background: rgba(${a.color.slice(1).match(../g).map(x=>parseInt(x,16)).join(',')},0.2); color: ${a.color};">${a.icon} ${a.agent}</span><span class="activity-content">${a.msg}</span>`;
-            document.getElementById('activityList').insertBefore(item, document.getElementById('activityList').firstChild);
-            if (document.getElementById('activityList').children.length > 8) document.getElementById('activityList').lastChild.remove();
+            item.style.setProperty('--color', a.color);
+            item.innerHTML = `
+                <span class="activity-time">刚刚</span>
+                <span class="activity-agent">${a.agent}</span>
+                <span class="activity-content">${a.msg}</span>
+            `;
+            const list = document.getElementById('activityList');
+            list.insertBefore(item, list.firstChild);
+            if (list.children.length > 8) list.lastChild.remove();
         }
-        setInterval(addActivity, 10000);
+
+        setInterval(addActivity, 8000);
     </script>
 </body>
 </html>
