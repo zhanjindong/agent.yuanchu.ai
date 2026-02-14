@@ -69,18 +69,21 @@
             text-align: center;
         }
         .agents-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: nowrap;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 20px 0;
         }
         .agent-card {
+            flex: 0 0 220px;
             background: rgba(255,255,255,0.02);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px;
-            padding: 30px;
+            padding: 25px 20px;
             transition: all 0.3s;
             position: relative;
-            overflow: hidden;
         }
         .agent-card:hover {
             background: rgba(255,255,255,0.05);
