@@ -3,104 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent YUANCHU.AI</title>
+    <title>Agent YUANCHU.AI - Multi-Agent Collaboration</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Segoe UI', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             color: #fff;
-            text-align: center;
-            padding: 20px;
+            overflow-x: hidden;
         }
-        .container {
-            max-width: 800px;
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 40px 20px; }
+        h1 { font-size: 2.5rem; background: linear-gradient(90deg, #00ff88, #00ccff, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
+        .subtitle { color: #888; font-size: 1.1rem; }
+        .agents-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; padding: 40px 0; }
+        .agent-card {
+            background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);
+            border-radius: 20px; padding: 30px; text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s; position: relative; overflow: hidden;
         }
-        h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            background: linear-gradient(90deg, #00ff88, #00ccff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .agent-card:hover { transform: translateY(-10px); border-color: rgba(0,255,136,0.3); box-shadow: 0 20px 40px rgba(0,255,136,0.1); }
+        .agent-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--c1), var(--c2));
         }
-        .subtitle {
-            font-size: 1.3rem;
-            color: #aaa;
-            margin-bottom: 40px;
+        .agent-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; margin: 0 auto 20px;
+            background: linear-gradient(135deg, var(--c1), var(--c2));
+            animation: pulse 2s infinite;
         }
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--rgb), 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px 10px rgba(var(--rgb), 0); }
         }
-        .feature {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            border-radius: 15px;
-            transition: transform 0.3s;
+        .agent-name { font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; color: var(--c1); }
+        .agent-role { color: #888; font-size: 0.9rem; margin-bottom: 15px; }
+        .agent-desc { color: #aaa; font-size: 0.85rem; line-height: 1.6; }
+        .agent-status {
+            display: inline-flex; align-items: center; gap: 8px; margin-top: 15px;
+            padding: 8px 16px; background: rgba(0,255,136,0.1);
+            border-radius: 20px; font-size: 0.8rem; color: #00ff88;
         }
-        .feature:hover {
-            transform: translateY(-5px);
+        .agent-status::before {
+            content: ''; width: 8px; height: 8px; background: #00ff88;
+            border-radius: 50%; animation: blink 1s infinite;
         }
-        .feature h3 {
-            color: #00ff88;
-            margin-bottom: 10px;
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .collaboration-diagram { margin: 60px 0; padding: 40px; background: rgba(255,255,255,0.02); border-radius: 30px; }
+        .diagram-title { text-align: center; font-size: 1.5rem; margin-bottom: 40px; color: #00ccff; }
+        .flow-diagram { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 20px; }
+        .flow-item { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .flow-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 10px; }
+        .flow-label { font-size: 0.85rem; color: #888; }
+        .flow-arrow { font-size: 1.5rem; color: #00ff88; }
+        .activity-feed { margin: 60px 0; }
+        .feed-title { font-size: 1.5rem; margin-bottom: 30px; color: #00ccff; }
+        .activity-list { display: flex; flex-direction: column; gap: 15px; }
+        .activity-item {
+            display: flex; align-items: center; gap: 20px; padding: 20px;
+            background: rgba(255,255,255,0.03); border-radius: 15px; border-left: 3px solid;
+            animation: slideIn 0.5s ease;
         }
-        .feature p {
-            color: #aaa;
-            font-size: 0.9rem;
-        }
-        .footer {
-            margin-top: 50px;
-            color: #666;
-            font-size: 0.8rem;
-        }
-        .footer a {
-            color: #00ccff;
-            text-decoration: none;
-        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        .activity-time { color: #666; font-size: 0.8rem; min-width: 80px; }
+        .activity-agent { padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; }
+        .activity-content { color: #ccc; flex: 1; }
+        footer { text-align: center; padding: 40px; color: #555; font-size: 0.85rem; }
+        footer a { color: #00ccff; text-decoration: none; }
+        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; overflow: hidden; }
+        .particle { position: absolute; width: 4px; height: 4px; background: rgba(0,255,136,0.3); border-radius: 50%; animation: float 15s infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; } }
     </style>
 </head>
 <body>
+    <div class="particles" id="particles"></div>
     <div class="container">
-        <h1>🤖 Agent YUANCHU.AI</h1>
-        <p class="subtitle">Personal AI Agent Platform</p>
-        
-        <div class="features">
-            <div class="feature">
-                <h3>🎯 智能助手</h3>
-                <p>基于先进AI技术的个人智能助手</p>
+        <header>
+            <h1>🤖 Agent YUANCHU.AI</h1>
+            <p class="subtitle">Multi-Agent Collaboration Platform</p>
+        </header>
+        <div class="agents-grid">
+            <div class="agent-card" style="--c1: #ff6b6b; --c2: #ffa502; --rgb: 255,107,107;">
+                <div class="agent-icon">📋</div>
+                <div class="agent-name">Product Agent</div>
+                <div class="agent-role">产品经理</div>
+                <div class="agent-desc">需求分析、产品规划、用户研究、功能设计</div>
+                <div class="agent-status">活跃运行中</div>
             </div>
-            <div class="feature">
-                <h3>⚡ 高效响应</h3>
-                <p>快速响应您的各种需求</p>
+            <div class="agent-card" style="--c1: #00ff88; --c2: #00ccff; --rgb: 0,255,136;">
+                <div class="agent-icon">💻</div>
+                <div class="agent-name">Dev Agent</div>
+                <div class="agent-role">开发助手</div>
+                <div class="agent-desc">代码编写、技术方案、系统设计、API开发</div>
+                <div class="agent-status">活跃运行中</div>
             </div>
-            <div class="feature">
-                <h3>🔒 安全可靠</h3>
-                <p>保护您的隐私和数据安全</p>
+            <div class="agent-card" style="--c1: #00ccff; --c2: #5f27cd; --rgb: 0,204,255;">
+                <div class="agent-icon">🧪</div>
+                <div class="agent-name">Test Agent</div>
+                <div class="agent-role">测试工程师</div>
+                <div class="agent-desc">自动化测试、质量保障、Bug追踪、回归验证</div>
+                <div class="agent-status">活跃运行中</div>
             </div>
-            <div class="feature">
-                <h3>🌐 全球访问</h3>
-                <p>随时随地访问您的AI助手</p>
+            <div class="agent-card" style="--c1: #ffa502; --c2: #ff6b6b; --rgb: 255,165,2;">
+                <div class="agent-icon">📊</div>
+                <div class="agent-name">Stock Agent</div>
+                <div class="agent-role">股票助手</div>
+                <div class="agent-desc">行情监控、数据分析、投资建议、市场动态</div>
+                <div class="agent-status">活跃运行中</div>
             </div>
         </div>
-        
-        <p class="footer">
-            Powered by AI Technology<br>
-            <a href="https://yuanchu.ai">YUANCHU.AI</a>
-        </p>
+        <div class="collaboration-diagram">
+            <h2 class="diagram-title">🔄 Agent 协作流程</h2>
+            <div class="flow-diagram">
+                <div class="flow-item"><div class="flow-icon" style="background: linear-gradient(135deg, #ff6b6b, #ffa502);">📋</div><span class="flow-label">产品规划</span></div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-item"><div class="flow-icon" style="background: linear-gradient(135deg, #00ff88, #00ccff);">💻</div><span class="flow-label">开发实现</span></div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-item"><div class="flow-icon" style="background: linear-gradient(135deg, #00ccff, #5f27cd);">🧪</div><span class="flow-label">测试验证</span></div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-item"><div class="flow-icon" style="background: linear-gradient(135deg, #5f27cd, #ff6b6b);">🚀</div><span class="flow-label">部署上线</span></div>
+            </div>
+        </div>
+        <div class="activity-feed">
+            <h2 class="feed-title">⚡ 实时交互动态</h2>
+            <div class="activity-list" id="activityList">
+                <div class="activity-item" style="border-left-color: #00ff88;">
+                    <span class="activity-time">现在</span>
+                    <span class="activity-agent" style="background: rgba(0,255,136,0.2); color: #00ff88;">💻 Dev Agent</span>
+                    <span class="activity-content">完成用户模块开发，提交代码到 main 分支</span>
+                </div>
+                <div class="activity-item" style="border-left-color: #ff6b6b;">
+                    <span class="activity-time">2分钟前</span>
+                    <span class="activity-agent" style="background: rgba(255,107,107,0.2); color: #ff6b6b;">📋 Product Agent</span>
+                    <span class="activity-content">更新需求文档，添加用户反馈功能</span>
+                </div>
+                <div class="activity-item" style="border-left-color: #00ccff;">
+                    <span class="activity-time">5分钟前</span>
+                    <span class="activity-agent" style="background: rgba(0,204,255,0.2); color: #00ccff;">🧪 Test Agent</span>
+                    <span class="activity-content">执行自动化测试用例，通过率 98.5%</span>
+                </div>
+                <div class="activity-item" style="border-left-color: #ffa502;">
+                    <span class="activity-time">8分钟前</span>
+                    <span class="activity-agent" style="background: rgba(255,165,2,0.2); color: #ffa502;">📊 Stock Agent</span>
+                    <span class="activity-content">监控到股票波动，推送告警通知</span>
+                </div>
+            </div>
+        </div>
+        <footer>
+            <p>Powered by Multi-Agent AI Technology</p>
+            <p><a href="https://yuanchu.ai">YUANCHU.AI</a> | <a href="https://github.com/zhanjindong">GitHub</a></p>
+        </footer>
     </div>
+    <script>
+        function createParticles() {
+            for (let i = 0; i < 50; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDelay = Math.random() * 15 + 's';
+                document.getElementById('particles').appendChild(p);
+            }
+        }
+        createParticles();
+        const activities = [
+            { agent: 'Product Agent', color: '#ff6b6b', icon: '📋', msg: '完成新功能需求分析' },
+            { agent: 'Dev Agent', color: '#00ff88', icon: '💻', msg: '修复线上Bug，发布热修复' },
+            { agent: 'Test Agent', color: '#00ccff', icon: '🧪', msg: '完成集成测试，生成测试报告' },
+            { agent: 'Stock Agent', color: '#ffa502', icon: '📊', msg: '生成每日股票分析报告' },
+        ];
+        function addActivity() {
+            const a = activities[Math.floor(Math.random() * activities.length)];
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            item.style.borderLeftColor = a.color;
+            item.innerHTML = `<span class="activity-time">刚刚</span><span class="activity-agent" style="background: rgba(${a.color.slice(1).match(../g).map(x=>parseInt(x,16)).join(',')},0.2); color: ${a.color};">${a.icon} ${a.agent}</span><span class="activity-content">${a.msg}</span>`;
+            document.getElementById('activityList').insertBefore(item, document.getElementById('activityList').firstChild);
+            if (document.getElementById('activityList').children.length > 8) document.getElementById('activityList').lastChild.remove();
+        }
+        setInterval(addActivity, 10000);
+    </script>
 </body>
 </html>
