@@ -108,11 +108,11 @@
                 <div class="agent-desc">自动化测试、质量保障、Bug追踪、回归验证</div>
                 <div class="agent-status">活跃运行中</div>
             </div>
-            <div class="agent-card" style="--c1: #ffa502; --c2: #ff6b6b; --rgb: 255,165,2;">
-                <div class="agent-icon">📊</div>
-                <div class="agent-name">Stock Agent</div>
-                <div class="agent-role">股票助手</div>
-                <div class="agent-desc">行情监控、数据分析、投资建议、市场动态</div>
+            <div class="agent-card" style="--c1: #ffa502; --c2: #00ff88; --rgb: 255,165,2;">
+                <div class="agent-icon">🔧</div>
+                <div class="agent-name">Ops Agent</div>
+                <div class="agent-role">运维工程师</div>
+                <div class="agent-desc">系统监控、日志分析、故障排查、自动化运维</div>
                 <div class="agent-status">活跃运行中</div>
             </div>
         </div>
@@ -148,8 +148,8 @@
                 </div>
                 <div class="activity-item" style="border-left-color: #ffa502;">
                     <span class="activity-time">8分钟前</span>
-                    <span class="activity-agent" style="background: rgba(255,165,2,0.2); color: #ffa502;">📊 Stock Agent</span>
-                    <span class="activity-content">监控到股票波动，推送告警通知</span>
+                    <span class="activity-agent" style="background: rgba(255,165,2,0.2); color: #ffa502;">🔧 Ops Agent</span>
+                    <span class="activity-content">完成服务器巡检，系统运行正常</span>
                 </div>
             </div>
         </div>
@@ -173,7 +173,7 @@
             { agent: 'Product Agent', color: '#ff6b6b', icon: '📋', msg: '完成新功能需求分析' },
             { agent: 'Dev Agent', color: '#00ff88', icon: '💻', msg: '修复线上Bug，发布热修复' },
             { agent: 'Test Agent', color: '#00ccff', icon: '🧪', msg: '完成集成测试，生成测试报告' },
-            { agent: 'Stock Agent', color: '#ffa502', icon: '📊', msg: '生成每日股票分析报告' },
+            { agent: 'Ops Agent', color: '#ffa502', icon: '🔧', msg: '完成服务器巡检，系统运行正常' },
         ];
         function addActivity() {
             const a = activities[Math.floor(Math.random() * activities.length)];
