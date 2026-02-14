@@ -173,18 +173,34 @@
             text-transform: uppercase;
             margin-bottom: 50px;
         }
+        .flow-section {
+            margin-bottom: 100px;
+            padding: 60px 40px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 16px;
+        }
+        .flow-title {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 50px;
+        }
         .flow-diagram {
             display: flex;
             justify-content: center;
             align-items: center;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 15px;
+            position: relative;
         }
         .flow-step {
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
+            z-index: 2;
         }
         .flow-icon {
             width: 56px;
@@ -201,17 +217,56 @@
         }
         .flow-step:hover .flow-icon {
             background: rgba(255,255,255,0.1);
-            transform: scale(1.05);
+            transform: scale(1.08);
         }
         .flow-label {
             font-size: 12px;
             color: rgba(255,255,255,0.5);
             letter-spacing: 2px;
         }
-        .flow-arrow {
-            font-size: 20px;
-            color: rgba(255,255,255,0.2);
-            margin: 0 10px;
+        .flow-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            z-index: 3;
+        }
+        .flow-center-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, rgba(155,89,182,0.3), rgba(155,89,182,0.1));
+            border: 2px solid rgba(155,89,182,0.5);
+            box-shadow: 0 0 30px rgba(155,89,182,0.2);
+        }
+        .flow-center-label {
+            font-size: 12px;
+            color: rgba(155,89,182,0.8);
+            letter-spacing: 3px;
+            font-weight: bold;
+        }
+        .flow-connections {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            border: 1px dashed rgba(155,89,182,0.2);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .flow-note {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            letter-spacing: 2px;
         }
         .activity-section {
             margin-bottom: 60px;
@@ -359,31 +414,29 @@
         <section class="flow-section">
             <h2 class="flow-title">Workflow</h2>
             <div class="flow-diagram">
+                <div class="flow-connections"></div>
                 <div class="flow-step">
-                    <div class="flow-icon">📋</div>
+                    <div class="flow-icon" style="background: linear-gradient(135deg, rgba(255,107,107,0.2), rgba(255,107,107,0.05)); border-color: rgba(255,107,107,0.3);">📋</div>
                     <span class="flow-label">Product</span>
                 </div>
-                <span class="flow-arrow">→</span>
                 <div class="flow-step">
-                    <div class="flow-icon">📊</div>
-                    <span class="flow-label">Project</span>
-                </div>
-                <span class="flow-arrow">→</span>
-                <div class="flow-step">
-                    <div class="flow-icon">💻</div>
+                    <div class="flow-icon" style="background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(0,255,136,0.05)); border-color: rgba(0,255,136,0.3);">💻</div>
                     <span class="flow-label">Dev</span>
                 </div>
-                <span class="flow-arrow">→</span>
                 <div class="flow-step">
-                    <div class="flow-icon">🧪</div>
+                    <div class="flow-icon" style="background: linear-gradient(135deg, rgba(0,204,255,0.2), rgba(0,204,255,0.05)); border-color: rgba(0,204,255,0.3);">🧪</div>
                     <span class="flow-label">Test</span>
                 </div>
-                <span class="flow-arrow">→</span>
                 <div class="flow-step">
-                    <div class="flow-icon">🚀</div>
-                    <span class="flow-label">Deploy</span>
+                    <div class="flow-icon" style="background: linear-gradient(135deg, rgba(255,165,2,0.2), rgba(255,165,2,0.05)); border-color: rgba(255,165,2,0.3);">🔧</div>
+                    <span class="flow-label">Ops</span>
+                </div>
+                <div class="flow-center">
+                    <div class="flow-center-icon">📊</div>
+                    <span class="flow-center-label">PROJECT</span>
                 </div>
             </div>
+            <p class="flow-note">项目经理统筹协调，各角色协作配合</p>
         </section>
 
         <section class="activity-section">
