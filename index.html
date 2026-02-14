@@ -161,9 +161,9 @@
         }
         .workflow-section {
             margin-bottom: 100px;
-            padding: 60px 40px;
+            padding: 40px 40px;
             background: rgba(255,255,255,0.02);
-            border-radius: 16px;
+            border-radius: 12px;
         }
         .workflow-title {
             text-align: center;
@@ -171,22 +171,20 @@
             color: rgba(255,255,255,0.4);
             letter-spacing: 4px;
             text-transform: uppercase;
-            margin-bottom: 50px;
+            margin-bottom: 30px;
         }
         .workflow-container {
             position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 320px;
+            height: 180px;
         }
         .workflow-svg {
             position: absolute;
             top: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 900px;
-            height: 320px;
             pointer-events: none;
         }
         .workflow-node {
@@ -196,32 +194,20 @@
             align-items: center;
             text-align: center;
             z-index: 2;
-            transition: all 0.3s;
-        }
-        .workflow-node:hover {
-            transform: scale(1.05);
         }
         .workflow-node-icon {
-            width: 72px;
-            height: 72px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             background: rgba(255,255,255,0.05);
-            border: 2px solid rgba(255,255,255,0.1);
-            transition: all 0.3s;
-        }
-        .workflow-node:hover .workflow-node-icon {
-            box-shadow: 0 0 30px rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
         }
         .workflow-node-label {
-            font-size: 12px;
-            color: rgba(255,255,255,0.6);
-            letter-spacing: 2px;
-            font-weight: 500;
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 1px;
         }
         .workflow-projector {
             position: absolute;
@@ -235,29 +221,20 @@
             z-index: 3;
         }
         .workflow-projector-icon {
-            width: 80px;
-            height: 80px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            margin-bottom: 12px;
-            background: linear-gradient(135deg, rgba(155,89,182,0.4), rgba(155,89,182,0.15));
-            border: 3px solid rgba(155,89,182,0.7);
-            box-shadow: 0 0 40px rgba(155,89,182,0.4);
-            animation: projectorPulse 2s ease-in-out infinite;
-        }
-        @keyframes projectorPulse {
-            0%, 100% { box-shadow: 0 0 40px rgba(155,89,182,0.4); }
-            50% { box-shadow: 0 0 60px rgba(155,89,182,0.6); }
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, rgba(155,89,182,0.3), rgba(155,89,182,0.1));
+            border: 2px solid rgba(155,89,182,0.5);
+            box-shadow: 0 0 20px rgba(155,89,182,0.3);
         }
         .workflow-projector-label {
-            font-size: 12px;
-            color: rgba(155,89,182,1);
-            letter-spacing: 3px;
+            font-size: 10px;
+            color: rgba(155,89,182,0.9);
+            letter-spacing: 2px;
             font-weight: bold;
-            text-shadow: 0 0 10px rgba(155,89,182,0.5);
         }
         .workflow-note {
             text-align: center;
@@ -265,17 +242,6 @@
             font-size: 11px;
             color: rgba(255,255,255,0.3);
             letter-spacing: 2px;
-            line-height: 1.8;
-        }
-        .workflow-note strong {
-            color: rgba(155,89,182,0.8);
-        }
-        .feedback-note {
-            text-align: center;
-            margin-top: 15px;
-            font-size: 10px;
-            color: rgba(255,107,107,0.6);
-            letter-spacing: 1px;
         }
         .activity-section {
             margin-bottom: 60px;
@@ -421,8 +387,8 @@
 
         <section class="workflow-section">
             <h2 class="workflow-title">Workflow</h2>
-            <div class="workflow-container">
-                <svg class="workflow-svg" viewBox="0 0 900 200">
+            <div class="workflow-container" style="height: 200px;">
+                <svg class="workflow-svg" viewBox="0 0 900 200" style="width: 900px; height: 200px;">
                     <defs>
                         <marker id="arrowMain" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
                             <path d="M0,0 L0,6 L9,3 z" fill="#00ff88" />
@@ -433,68 +399,39 @@
                     </defs>
                     
                     <!-- 主流程线 -->
-                    <line x1="170" y1="100" x2="260" y2="100" stroke="rgba(0,255,136,0.5)" stroke-width="2" marker-end="url(#arrowMain)" />
-                    <line x1="380" y1="100" x2="470" y2="100" stroke="rgba(0,204,255,0.5)" stroke-width="2" marker-end="url(#arrowMain)" />
-                    <line x1="590" y1="100" x2="680" y2="100" stroke="rgba(255,165,2,0.5)" stroke-width="2" marker-end="url(#arrowMain)" />
+                    <line x1="170" y1="100" x2="260" y2="100" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" marker-end="url(#arrowMain)" />
+                    <line x1="380" y1="100" x2="470" y2="100" stroke="rgba(0,204,255,0.4)" stroke-width="1.5" marker-end="url(#arrowMain)" />
+                    <line x1="590" y1="100" x2="680" y2="100" stroke="rgba(255,165,2,0.4)" stroke-width="1.5" marker-end="url(#arrowMain)" />
                     
                     <!-- 反馈回路：Test → Dev -->
-                    <path d="M 510,70 Q 510,20 360,20 Q 210,20 210,60" stroke="#ff6b6b" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowFeedback)" />
+                    <path d="M 510,100 Q 510,20 360,20 Q 210,20 210,60" stroke="#ff6b6b" stroke-width="1" fill="none" stroke-dasharray="4,3" marker-end="url(#arrowFeedback)" />
                     
                     <!-- 反馈回路：Dev → Product -->
-                    <path d="M 130,100 Q 130,10 50,10" stroke="#ff6b6b" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowFeedback)" />
-                    
-                    <!-- 主流程流动粒子 -->
-                    <circle r="4" fill="#00ff88">
-                        <animateMotion dur="2s" repeatCount="indefinite" path="M170,100 L260,100" />
-                        <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" />
-                    </circle>
-                    <circle r="4" fill="#00ccff">
-                        <animateMotion dur="2s" repeatCount="indefinite" begin="0.5s" path="M380,100 L470,100" />
-                        <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="0.5s" />
-                    </circle>
-                    <circle r="4" fill="#ffa502">
-                        <animateMotion dur="2s" repeatCount="indefinite" begin="1s" path="M590,100 L680,100" />
-                        <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="1s" />
-                    </circle>
-                    
-                    <!-- 反馈流动粒子 -->
-                    <circle r="3" fill="#ff6b6b">
-                        <animateMotion dur="2.5s" repeatCount="indefinite" path="M 510,70 Q 510,20 360,20 Q 210,20 210,60" />
-                        <animate attributeName="opacity" values="1;0" dur="2.5s" repeatCount="indefinite" />
-                    </circle>
-                    <circle r="3" fill="#ff6b6b">
-                        <animateMotion dur="3s" repeatCount="indefinite" begin="1s" path="M 130,100 Q 130,10 50,10" />
-                        <animate attributeName="opacity" values="1;0" dur="3s" repeatCount="indefinite" begin="1s" />
-                    </circle>
+                    <path d="M 130,100 Q 130,30 50,30" stroke="#ff6b6b" stroke-width="1" fill="none" stroke-dasharray="4,3" marker-end="url(#arrowFeedback)" />
                 </svg>
 
-                <div class="workflow-node" style="left: 50%; top: 10px; transform: translateX(-50%);">
-                    <div class="workflow-node-icon" style="background: linear-gradient(135deg, rgba(255,107,107,0.3), rgba(255,107,107,0.1)); border-color: rgba(255,107,107,0.6);">📋</div>
-                    <span class="workflow-node-label">PRODUCT</span>
+                <div class="workflow-node" style="left: 50%; top: 0; transform: translateX(-50%);">
+                    <div class="workflow-node-icon" style="width: 56px; height: 56px; font-size: 1.4rem;">📋</div>
+                    <span class="workflow-node-label" style="font-size: 10px;">PRODUCT</span>
                 </div>
-                <div class="workflow-node" style="left: 120px; top: 50%; transform: translateY(-50%);">
-                    <div class="workflow-node-icon" style="background: linear-gradient(135deg, rgba(0,255,136,0.3), rgba(0,255,136,0.1)); border-color: rgba(0,255,136,0.6);">💻</div>
-                    <span class="workflow-node-label">DEV</span>
+                <div class="workflow-node" style="left: 100px; top: 50%; transform: translateY(-50%);">
+                    <div class="workflow-node-icon" style="width: 56px; height: 56px; font-size: 1.4rem;">💻</div>
+                    <span class="workflow-node-label" style="font-size: 10px;">DEV</span>
                 </div>
                 <div class="workflow-node" style="left: 320px; top: 50%; transform: translateY(-50%);">
-                    <div class="workflow-node-icon" style="background: linear-gradient(135deg, rgba(0,204,255,0.3), rgba(0,204,255,0.1)); border-color: rgba(0,204,255,0.6);">🧪</div>
-                    <span class="workflow-node-label">TEST</span>
+                    <div class="workflow-node-icon" style="width: 56px; height: 56px; font-size: 1.4rem;">🧪</div>
+                    <span class="workflow-node-label" style="font-size: 10px;">TEST</span>
                 </div>
-                <div class="workflow-node" style="left: 520px; top: 50%; transform: translateY(-50%);">
-                    <div class="workflow-node-icon" style="background: linear-gradient(135deg, rgba(255,165,2,0.3), rgba(255,165,2,0.1)); border-color: rgba(255,165,2,0.6);">🚀</div>
-                    <span class="workflow-node-label">OPS</span>
+                <div class="workflow-node" style="left: 540px; top: 50%; transform: translateY(-50%);">
+                    <div class="workflow-node-icon" style="width: 56px; height: 56px; font-size: 1.4rem;">🚀</div>
+                    <span class="workflow-node-label" style="font-size: 10px;">OPS</span>
                 </div>
                 
                 <div class="workflow-projector">
-                    <div class="workflow-projector-icon">📊</div>
-                    <span class="workflow-projector-label">PROJECT</span>
+                    <div class="workflow-projector-icon" style="width: 56px; height: 56px; font-size: 1.4rem;">📊</div>
+                    <span class="workflow-projector-label" style="font-size: 10px;">PROJECT</span>
                 </div>
             </div>
-            <p class="workflow-note">
-                <strong style="color:#00ff88;">主流程：</strong>Product → Dev → Test → Ops<br>
-                <strong style="color:#ff6b6b;">反馈回路：</strong>测试问题 → 返回研发 | 开发过程 → 需求分析<br>
-                <strong style="color:#9b59b6;">项目经理统筹推进整个过程</strong>
-            </p>
         </section>
 
         <section class="activity-section">
