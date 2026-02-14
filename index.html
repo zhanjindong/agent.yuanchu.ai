@@ -91,59 +91,60 @@
             border-color: rgba(255,255,255,0.2);
             transform: translateY(-4px);
         }
-        .agent-card.coordinator {
-            flex: 0 0 280px;
-            border-color: rgba(155,89,182,0.4);
-            background: rgba(155,89,182,0.05);
-        }
-        .agent-card.coordinator::before {
-            content: 'COORDINATOR';
+        .agent-card::before {
+            content: '';
             position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, #9b59b6, #8e44ad);
-            color: #fff;
-            font-size: 9px;
-            padding: 4px 12px;
-            border-radius: 10px;
-            letter-spacing: 1px;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gradient);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .agent-card:hover::before {
+            opacity: 1;
+        }
+        .agent-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
         }
         .agent-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 14px;
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6rem;
-            margin: 0 auto 15px;
+            font-size: 1.5rem;
             background: var(--gradient);
         }
-        .agent-name {
-            font-size: 15px;
+        .agent-info h3 {
+            font-size: 14px;
             font-weight: 500;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             letter-spacing: 2px;
         }
-        .agent-role {
+        .agent-info p {
             font-size: 10px;
             color: rgba(255,255,255,0.4);
             letter-spacing: 1px;
             text-transform: uppercase;
-            margin-bottom: 15px;
         }
         .agent-desc {
             font-size: 12px;
             color: rgba(255,255,255,0.5);
             line-height: 1.7;
             text-align: left;
+            margin-bottom: 15px;
         }
         .agent-status {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            margin-top: 15px;
             font-size: 10px;
             color: rgba(255,255,255,0.4);
             text-transform: uppercase;
@@ -160,94 +161,6 @@
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
-        }
-        .workflow-section {
-            margin-bottom: 100px;
-            padding: 60px 40px;
-            background: rgba(255,255,255,0.02);
-            border-radius: 16px;
-        }
-        .workflow-diagram {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 60px;
-        }
-        .workflow-step {
-            display: flex;
-            align-items: center;
-            gap: 30px;
-        }
-        .workflow-center {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .workflow-coordinator {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, rgba(155,89,182,0.4), rgba(155,89,182,0.1));
-            border: 3px solid rgba(155,89,182,0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.2rem;
-            box-shadow: 0 0 40px rgba(155,89,182,0.4);
-            z-index: 2;
-        }
-        .workflow-arrow {
-            width: 2px;
-            height: 40px;
-            background: linear-gradient(180deg, rgba(155,89,182,0.5), transparent);
-            position: relative;
-        }
-        .workflow-arrow::after {
-            content: '▼';
-            position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(155,89,182,0.5);
-            font-size: 10px;
-        }
-        .workflow-branch {
-            display: flex;
-            gap: 40px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .workflow-agent {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-        .workflow-agent-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-            background: var(--gradient);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .workflow-agent-name {
-            font-size: 10px;
-            color: rgba(255,255,255,0.5);
-            letter-spacing: 1px;
-        }
-        .workflow-label {
-            text-align: center;
-            padding: 20px;
-            font-size: 11px;
-            color: rgba(255,255,255,0.3);
-            letter-spacing: 2px;
-            line-height: 1.8;
         }
         .activity-section {
             margin-bottom: 60px;
@@ -322,7 +235,6 @@
         @media (max-width: 768px) {
             h1 { font-size: 32px; letter-spacing: 8px; }
             .content { padding: 60px 20px; }
-            .workflow-branch { gap: 20px; }
         }
     </style>
 </head>
@@ -338,116 +250,86 @@
         <section class="agents-section">
             <h2 class="section-title">Agents</h2>
             <div class="agents-grid">
-                <div class="agent-card coordinator" style="--gradient: linear-gradient(135deg, #9b59b6, #8e44ad); --status-color: #9b59b6;">
-                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #9b59b6, #8e44ad);">🎯</div>
-                    <div class="agent-name">Coordinator</div>
-                    <div class="agent-role">协调者</div>
-                    <p class="agent-desc">理解任务意图，规划执行流程，分派工作给专业 agent，汇总结果</p>
-                    <span class="agent-status">协调中</span>
+                <div class="agent-card" style="--gradient: linear-gradient(135deg, #ff6b6b, #ffa502); --status-color: #ff6b6b;">
+                    <div class="agent-header">
+                        <div class="agent-icon" style="--gradient: linear-gradient(135deg, #ff6b6b, #ffa502);">📋</div>
+                        <div class="agent-info">
+                            <h3>Product</h3>
+                            <p>Product Manager</p>
+                        </div>
+                    </div>
+                    <p class="agent-desc">需求分析、产品规划、用户研究、功能设计</p>
+                    <span class="agent-status">活跃运行中</span>
+                </div>
+                <div class="agent-card" style="--gradient: linear-gradient(135deg, #9b59b6, #e74c3c); --status-color: #9b59b6;">
+                    <div class="agent-header">
+                        <div class="agent-icon" style="--gradient: linear-gradient(135deg, #9b59b6, #e74c3c);">📊</div>
+                        <div class="agent-info">
+                            <h3>Project</h3>
+                            <p>Project Manager</p>
+                        </div>
+                    </div>
+                    <p class="agent-desc">项目管理、进度控制、资源协调、风险识别、干系人沟通</p>
+                    <span class="agent-status">活跃运行中</span>
                 </div>
                 <div class="agent-card" style="--gradient: linear-gradient(135deg, #00ff88, #00ccff); --status-color: #00ff88;">
-                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #00ff88, #00ccff);">💻</div>
-                    <div class="agent-name">Coder</div>
-                    <div class="agent-role">开发</div>
-                    <p class="agent-desc">代码编写、调试、重构、技术方案</p>
-                    <span class="agent-status">待命中</span>
-                </div>
-                <div class="agent-card" style="--gradient: linear-gradient(135deg, #3498db, #2ecc71); --status-color: #3498db;">
-                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #3498db, #2ecc71);">🔍</div>
-                    <div class="agent-name">Researcher</div>
-                    <div class="agent-role">研究</div>
-                    <p class="agent-desc">信息检索、资料整理、技术调研</p>
-                    <span class="agent-status">待命中</span>
-                </div>
-                <div class="agent-card" style="--gradient: linear-gradient(135deg, #e74c3c, #f39c12); --status-color: #e74c3c;">
-                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #e74c3c, #f39c12);">✍️</div>
-                    <div class="agent-name">Writer</div>
-                    <div class="agent-role">写作</div>
-                    <p class="agent-desc">文档撰写、内容编辑、报告生成</p>
-                    <span class="agent-status">待命中</span>
-                </div>
-                <div class="agent-card" style="--gradient: linear-gradient(135deg, #00ccff, #9b59b6); --status-color: #00ccff;">
-                    <div class="agent-icon" style="--gradient: linear-gradient(135deg, #00ccff, #9b59b6);">🧪</div>
-                    <div class="agent-name">Tester</div>
-                    <div class="agent-role">测试</div>
-                    <p class="agent-desc">测试用例、代码审查、质量保障</p>
-                    <span class="agent-status">待命中</span>
-                </div>
-            </div>
-        </section>
-
-        <section class="workflow-section">
-            <h2 class="section-title">Workflow</h2>
-            <div class="workflow-diagram">
-                <div class="workflow-step">
-                    <div class="workflow-center">
-                        <div class="workflow-coordinator">🎯</div>
-                        <p style="font-size: 10px; color: rgba(155,89,182,0.8); margin-top: 10px; letter-spacing: 1px;">COORDINATOR</p>
+                    <div class="agent-header">
+                        <div class="agent-icon" style="--gradient: linear-gradient(135deg, #00ff88, #00ccff);">💻</div>
+                        <div class="agent-info">
+                            <h3>Dev</h3>
+                            <p>Development</p>
+                        </div>
                     </div>
+                    <p class="agent-desc">代码编写、技术方案、系统设计、API开发</p>
+                    <span class="agent-status">活跃运行中</span>
                 </div>
-                
-                <div class="workflow-arrow"></div>
-                
-                <div class="workflow-label">接收任务 → 分析意图 → 规划执行</div>
-                
-                <div class="workflow-arrow"></div>
-                
-                <div class="workflow-branch">
-                    <div class="workflow-agent">
-                        <div class="workflow-agent-icon" style="--gradient: linear-gradient(135deg, #00ff88, #00ccff);">💻</div>
-                        <span class="workflow-agent-name">Coder</span>
+                <div class="agent-card" style="--gradient: linear-gradient(135deg, #00ccff, #5f27cd); --status-color: #00ccff;">
+                    <div class="agent-header">
+                        <div class="agent-icon" style="--gradient: linear-gradient(135deg, #00ccff, #5f27cd);">🧪</div>
+                        <div class="agent-info">
+                            <h3>Test</h3>
+                            <p>Quality Assurance</p>
+                        </div>
                     </div>
-                    <div class="workflow-agent">
-                        <div class="workflow-agent-icon" style="--gradient: linear-gradient(135deg, #3498db, #2ecc71);">🔍</div>
-                        <span class="workflow-agent-name">Researcher</span>
-                    </div>
-                    <div class="workflow-agent">
-                        <div class="workflow-agent-icon" style="--gradient: linear-gradient(135deg, #e74c3c, #f39c12);">✍️</div>
-                        <span class="workflow-agent-name">Writer</span>
-                    </div>
-                    <div class="workflow-agent">
-                        <div class="workflow-agent-icon" style="--gradient: linear-gradient(135deg, #00ccff, #9b59b6);">🧪</div>
-                        <span class="workflow-agent-name">Tester</span>
-                    </div>
+                    <p class="agent-desc">自动化测试、质量保障、Bug追踪、回归验证</p>
+                    <span class="agent-status">活跃运行中</span>
                 </div>
-                
-                <div class="workflow-label">Coordinator 根据任务类型指派合适的 Agent</div>
-                
-                <div class="workflow-arrow"></div>
-                
-                <div class="workflow-step">
-                    <div class="workflow-center">
-                        <div class="workflow-coordinator" style="width: 80px; height: 80px; font-size: 1.8rem;">📋</div>
-                        <p style="font-size: 10px; color: rgba(155,89,182,0.8); margin-top: 10px; letter-spacing: 1px;">RESULT</p>
+                <div class="agent-card" style="--gradient: linear-gradient(135deg, #ffa502, #00ff88); --status-color: #ffa502;">
+                    <div class="agent-header">
+                        <div class="agent-icon" style="--gradient: linear-gradient(135deg, #ffa502, #00ff88);">🚀</div>
+                        <div class="agent-info">
+                            <h3>Ops</h3>
+                            <p>Operations</p>
+                        </div>
                     </div>
+                    <p class="agent-desc">系统监控、日志分析、故障排查、自动化运维</p>
+                    <span class="agent-status">活跃运行中</span>
                 </div>
-                
-                <div class="workflow-label">Agent 完成工作 → 返回 Coordinator → 汇总输出</div>
             </div>
         </section>
 
         <section class="activity-section">
             <h2 class="activity-title">Activity</h2>
             <div class="activity-list" id="activityList">
-                <div class="activity-item" style="--color: #9b59b6;">
-                    <span class="activity-time">刚刚</span>
-                    <span class="activity-agent">🎯 Coordinator</span>
-                    <span class="activity-content">接收到任务：开发用户认证模块</span>
-                </div>
-                <div class="activity-item" style="--color: #9b59b6;">
-                    <span class="activity-time">刚刚</span>
-                    <span class="activity-agent">🎯 Coordinator</span>
-                    <span class="activity-content">分析任务，指派 Coder 执行开发工作</span>
-                </div>
                 <div class="activity-item" style="--color: #00ff88;">
-                    <span class="activity-time">1分钟前</span>
-                    <span class="activity-agent">💻 Coder</span>
-                    <span class="activity-content">完成用户登录接口开发，提交代码</span>
+                    <span class="activity-time">刚刚</span>
+                    <span class="activity-agent">💻 Dev Agent</span>
+                    <span class="activity-content">完成用户模块开发，提交代码到 main 分支</span>
                 </div>
-                <div class="activity-item" style="--color: #9b59b6;">
+                <div class="activity-item" style="--color: #ff6b6b;">
                     <span class="activity-time">2分钟前</span>
-                    <span class="activity-agent">🎯 Coordinator</span>
-                    <span class="activity-content">收到 Coder 结果，汇总并输出最终方案</span>
+                    <span class="activity-agent">📋 Product Agent</span>
+                    <span class="activity-content">更新需求文档，添加用户反馈功能</span>
+                </div>
+                <div class="activity-item" style="--color: #00ccff;">
+                    <span class="activity-time">5分钟前</span>
+                    <span class="activity-agent">🧪 Test Agent</span>
+                    <span class="activity-content">执行自动化测试用例，通过率 98.5%</span>
+                </div>
+                <div class="activity-item" style="--color: #ffa502;">
+                    <span class="activity-time">8分钟前</span>
+                    <span class="activity-agent">🚀 Ops Agent</span>
+                    <span class="activity-content">完成服务器巡检，系统运行正常</span>
                 </div>
             </div>
         </section>
@@ -527,12 +409,14 @@
         animate();
 
         const activities = [
-            { agent: '🎯 Coordinator', color: '#9b59b6', msg: '接收到新任务，开始分析规划' },
-            { agent: '💻 Coder', color: '#00ff88', msg: '收到开发任务，开始编写代码' },
-            { agent: '🔍 Researcher', color: '#3498db', msg: '收到调研任务，开始信息检索' },
-            { agent: '✍️ Writer', color: '#e74c3c', msg: '收到写作任务，开始撰写文档' },
-            { agent: '🧪 Tester', color: '#00ccff', msg: '收到测试任务，开始编写测试用例' },
-            { agent: '🎯 Coordinator', color: '#9b59b6', msg: '汇总各 Agent 结果，输出最终方案' },
+            { agent: '📋 Product Agent', color: '#ff6b6b', msg: '完成新功能需求分析' },
+            { agent: '📊 Project Agent', color: '#9b59b6', msg: '完成项目进度评估，更新里程碑计划' },
+            { agent: '💻 Dev Agent', color: '#00ff88', msg: '修复线上Bug，发布热修复' },
+            { agent: '🧪 Test Agent', color: '#00ccff', msg: '完成集成测试，生成测试报告' },
+            { agent: '🚀 Ops Agent', color: '#ffa502', msg: '完成服务器巡检，系统运行正常' },
+            { agent: '📊 Project Agent', color: '#9b59b6', msg: '协调跨团队资源，推动项目按计划进行' },
+            { agent: '💻 Dev Agent', color: '#00ff88', msg: '代码审查通过，合并到开发分支' },
+            { agent: '📋 Product Agent', color: '#ff6b6b', msg: '用户调研完成，输出调研报告' },
         ];
 
         function addActivity() {
