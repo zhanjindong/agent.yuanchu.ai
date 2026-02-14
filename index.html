@@ -613,23 +613,28 @@
         <section class="activity-section">
             <h2 class="activity-title">Activity</h2>
             <div class="activity-list" id="activityList">
-                <div class="activity-item" style="--color: #00ff88;">
+                <div class="activity-item" style="--color: #667eea;">
                     <span class="activity-time">刚刚</span>
-                    <span class="activity-agent">💻 Development</span>
-                    <span class="activity-content">完成用户模块开发，提交代码到 main 分支</span>
+                    <span class="activity-agent">🏗️ Architecture</span>
+                    <span class="activity-content">完成系统架构设计，输出技术方案文档</span>
                 </div>
                 <div class="activity-item" style="--color: #ff6b6b;">
                     <span class="activity-time">2分钟前</span>
                     <span class="activity-agent">📋 Product</span>
                     <span class="activity-content">更新需求文档，添加用户反馈功能</span>
                 </div>
-                <div class="activity-item" style="--color: #00ccff;">
+                <div class="activity-item" style="--color: #00ff88;">
                     <span class="activity-time">5分钟前</span>
+                    <span class="activity-agent">💻 Development</span>
+                    <span class="activity-content">完成用户模块开发，提交代码到 main 分支</span>
+                </div>
+                <div class="activity-item" style="--color: #00ccff;">
+                    <span class="activity-time">8分钟前</span>
                     <span class="activity-agent">🧪 Testing</span>
                     <span class="activity-content">执行自动化测试用例，通过率 98.5%</span>
                 </div>
                 <div class="activity-item" style="--color: #f093fb;">
-                    <span class="activity-time">8分钟前</span>
+                    <span class="activity-time">12分钟前</span>
                     <span class="activity-agent">🔍 Review</span>
                     <span class="activity-content">完成代码审查，合并 PR #42</span>
                 </div>
@@ -711,14 +716,14 @@
         animate();
 
         const activities = [
-            { agent: '📋 Product Agent', color: '#ff6b6b', msg: '完成新功能需求分析' },
-            { agent: '📊 Project Agent', color: '#9b59b6', msg: '完成项目进度评估，更新里程碑计划' },
-            { agent: '💻 Dev Agent', color: '#00ff88', msg: '修复线上Bug，发布热修复' },
-            { agent: '🧪 Test Agent', color: '#00ccff', msg: '完成集成测试，生成测试报告' },
-            { agent: '🚀 Ops Agent', color: '#ffa502', msg: '完成服务器巡检，系统运行正常' },
-            { agent: '📊 Project Agent', color: '#9b59b6', msg: '协调跨团队资源，推动项目按计划进行' },
-            { agent: '💻 Dev Agent', color: '#00ff88', msg: '代码审查通过，合并到开发分支' },
-            { agent: '📋 Product Agent', color: '#ff6b6b', msg: '用户调研完成，输出调研报告' },
+            { agent: '🏗️ Architecture', color: '#667eea', msg: '完成系统架构设计，输出技术方案' },
+            { agent: '📋 Product', color: '#ff6b6b', msg: '完成新功能需求分析' },
+            { agent: '💻 Development', color: '#00ff88', msg: '修复线上Bug，发布热修复' },
+            { agent: '🧪 Testing', color: '#00ccff', msg: '完成集成测试，生成测试报告' },
+            { agent: '🔍 Review', color: '#f093fb', msg: '代码审查通过，合并到主分支' },
+            { agent: '📋 Product', color: '#ff6b6b', msg: '用户调研完成，输出调研报告' },
+            { agent: '💻 Development', color: '#00ff88', msg: '完成新功能开发，提交代码' },
+            { agent: '🔍 Review', color: '#f093fb', msg: '完成代码审查，提出优化建议' },
         ];
 
         function addActivity() {
