@@ -306,6 +306,17 @@
                     <p class="agent-desc">需求分析、产品规划、用户研究、功能设计</p>
                     <span class="agent-status">活跃运行中</span>
                 </div>
+                <div class="agent-card" style="--gradient: linear-gradient(135deg, #9b59b6, #e74c3c); --status-color: #9b59b6;">
+                    <div class="agent-header">
+                        <div class="agent-icon" style="--gradient: linear-gradient(135deg, #9b59b6, #e74c3c);">📊</div>
+                        <div class="agent-info">
+                            <h3>Project</h3>
+                            <p>Project Manager</p>
+                        </div>
+                    </div>
+                    <p class="agent-desc">项目管理、进度控制、资源协调、风险识别、干系人沟通</p>
+                    <span class="agent-status">活跃运行中</span>
+                </div>
                 <div class="agent-card" style="--gradient: linear-gradient(135deg, #00ff88, #00ccff); --status-color: #00ff88;">
                     <div class="agent-header">
                         <div class="agent-icon" style="--gradient: linear-gradient(135deg, #00ff88, #00ccff);">💻</div>
@@ -348,6 +359,11 @@
                 <div class="flow-step">
                     <div class="flow-icon">📋</div>
                     <span class="flow-label">Product</span>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                    <div class="flow-icon">📊</div>
+                    <span class="flow-label">Project</span>
                 </div>
                 <span class="flow-arrow">→</span>
                 <div class="flow-step">
@@ -469,9 +485,11 @@
 
         const activities = [
             { agent: '📋 Product Agent', color: '#ff6b6b', msg: '完成新功能需求分析' },
+            { agent: '📊 Project Agent', color: '#9b59b6', msg: '完成项目进度评估，更新里程碑计划' },
             { agent: '💻 Dev Agent', color: '#00ff88', msg: '修复线上Bug，发布热修复' },
             { agent: '🧪 Test Agent', color: '#00ccff', msg: '完成集成测试，生成测试报告' },
             { agent: '🔧 Ops Agent', color: '#ffa502', msg: '完成服务器巡检，系统运行正常' },
+            { agent: '📊 Project Agent', color: '#9b59b6', msg: '协调跨团队资源，推动项目按计划进行' },
             { agent: '💻 Dev Agent', color: '#00ff88', msg: '代码审查通过，合并到开发分支' },
             { agent: '📋 Product Agent', color: '#ff6b6b', msg: '用户调研完成，输出调研报告' },
         ];
