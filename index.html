@@ -262,6 +262,15 @@
             color: rgba(255,255,255,0.9);
             border-bottom-color: rgba(255,255,255,0.6);
         }
+        .workflow-desc {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            min-height: 18px;
+            transition: opacity 0.3s;
+        }
         .workflow-view {
             display: none;
         }
@@ -453,6 +462,165 @@
             text-transform: uppercase;
             white-space: nowrap;
         }
+        /* Auto View */
+        .auto-view {
+            position: relative;
+            width: 100%;
+            height: 420px;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+        .auto-view.active {
+            display: block;
+        }
+        .auto-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .auto-line {
+            stroke: rgba(255,255,255,0.06);
+            stroke-width: 1;
+        }
+        .auto-dispatch {
+            stroke: rgba(229,133,58,0.55);
+            stroke-width: 1.5;
+            stroke-dasharray: 4 4;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        .auto-dispatch.active {
+            opacity: 1;
+            animation: dashFlow 0.6s linear infinite;
+        }
+        .auto-center {
+            position: absolute;
+            top: 46%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 2;
+        }
+        .auto-center-ring {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(229,133,58,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            background: rgba(0,0,0,0.6);
+            animation: autoPulse 3s ease-in-out infinite;
+            position: relative;
+        }
+        .auto-center-ring::after {
+            content: '';
+            position: absolute;
+            inset: -12px;
+            border-radius: 50%;
+            border: 1px solid rgba(229,133,58,0.1);
+            animation: autoPulse 3s ease-in-out infinite 0.5s;
+        }
+        @keyframes autoPulse {
+            0%, 100% {
+                border-color: rgba(229,133,58,0.2);
+                box-shadow: 0 0 15px rgba(229,133,58,0.05);
+            }
+            50% {
+                border-color: rgba(229,133,58,0.55);
+                box-shadow: 0 0 35px rgba(229,133,58,0.15);
+            }
+        }
+        .auto-center-label {
+            font-size: 10px;
+            color: rgba(229,133,58,0.6);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .auto-task-node {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            transform: translate(-50%, -50%) scale(0);
+            z-index: 2;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .auto-task-node.spawned {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        .auto-task-node .wf-node-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+        .auto-task-node.spawned .wf-node-icon {
+            border-color: rgba(229,133,58,0.35);
+            box-shadow: 0 0 15px rgba(229,133,58,0.1);
+        }
+        .auto-task-node.active .wf-node-icon {
+            border-color: rgba(229,133,58,0.6);
+            box-shadow: 0 0 25px rgba(229,133,58,0.2);
+        }
+        .auto-task-node .wf-node-name {
+            font-size: 10px;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            transition: color 0.3s;
+        }
+        .auto-task-node.spawned .wf-node-name {
+            color: rgba(255,255,255,0.55);
+        }
+        .auto-thinking {
+            position: absolute;
+            top: 28%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: rgba(229,133,58,0.5);
+            letter-spacing: 2px;
+            opacity: 0;
+            transition: opacity 0.4s;
+            white-space: nowrap;
+        }
+        .auto-thinking.visible {
+            opacity: 1;
+        }
+        .auto-parallel-badge {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: rgba(229,133,58,0.4);
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.4s;
+            white-space: nowrap;
+        }
+        .auto-parallel-badge.visible {
+            opacity: 1;
+        }
         @media (max-width: 768px) {
             h1 { font-size: 32px; letter-spacing: 8px; }
             .content { padding: 60px 20px; }
@@ -462,9 +630,13 @@
             .wf-node-icon { width: 32px; height: 32px; font-size: 1rem; }
             .wf-node-name { font-size: 9px; }
             .team-view { height: 300px; }
+            .auto-view { height: 320px; }
             .wf-center-ring { width: 52px; height: 52px; font-size: 1.1rem; }
+            .auto-center-ring { width: 56px; height: 56px; font-size: 1.2rem; }
             .wf-team-node .wf-node-icon { width: 36px; height: 36px; font-size: 1rem; }
             .wf-team-node .wf-node-name { font-size: 9px; }
+            .auto-task-node .wf-node-icon { width: 36px; height: 36px; font-size: 1rem; }
+            .auto-task-node .wf-node-name { font-size: 9px; }
         }
     </style>
 </head>
@@ -543,7 +715,9 @@
             <div class="workflow-tabs">
                 <button class="workflow-tab active" onclick="switchWorkflow('pipeline')">Pipeline</button>
                 <button class="workflow-tab" onclick="switchWorkflow('team')">Team</button>
+                <button class="workflow-tab" onclick="switchWorkflow('auto')">Auto</button>
             </div>
+            <div class="workflow-desc" id="workflowDesc"></div>
             <div id="pipelineView" class="workflow-view pipeline-view active">
                 <div class="wf-node" data-idx="0">
                     <div class="wf-node-icon" style="background: linear-gradient(135deg, #ff6b6b, #ffa502);">📋</div>
@@ -607,6 +781,16 @@
                     <div class="wf-node-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🔍</div>
                     <div class="wf-node-name">Review</div>
                 </div>
+            </div>
+            <div id="autoView" class="workflow-view auto-view">
+                <svg class="auto-svg" id="autoSvg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+                <div class="auto-thinking" id="autoThinking">Analyzing task...</div>
+                <div class="auto-center">
+                    <div class="auto-center-ring">🧠</div>
+                    <div class="auto-center-label">AI Planner</div>
+                </div>
+                <div id="autoNodesContainer"></div>
+                <div class="auto-parallel-badge" id="autoParallel"></div>
             </div>
         </section>
 
@@ -744,12 +928,21 @@
         setInterval(addActivity, 8000);
 
         // Workflow tab switching
+        var workflowDescs = {
+            pipeline: '固定流水线，按顺序串行执行预定义的角色 Agent',
+            team: 'AI 编排器按需动态调度预定义角色 Agent，支持并行执行',
+            auto: 'AI 自主动态规划需要的子任务 Agent，支持并行执行'
+        };
         function switchWorkflow(mode) {
             document.querySelectorAll('.workflow-tab').forEach(function(t) { t.classList.remove('active'); });
             document.querySelectorAll('.workflow-view').forEach(function(v) { v.classList.remove('active'); });
             document.querySelector('.workflow-tab[onclick*="' + mode + '"]').classList.add('active');
-            document.getElementById(mode === 'pipeline' ? 'pipelineView' : 'teamView').classList.add('active');
+            var viewId = mode === 'pipeline' ? 'pipelineView' : mode === 'team' ? 'teamView' : 'autoView';
+            document.getElementById(viewId).classList.add('active');
+            document.getElementById('workflowDesc').textContent = workflowDescs[mode] || '';
         }
+        // Set initial description
+        document.getElementById('workflowDesc').textContent = workflowDescs.pipeline;
 
         // Pipeline sequential activation animation (~3.5s cycle)
         (function() {
@@ -784,6 +977,164 @@
                     teamNodes[idx].classList.remove('dispatched');
                 }, 1200);
             }, 2000);
+        })();
+
+        // Auto mode — dynamic agent pool, different combo each cycle
+        (function() {
+            var SVG_NS = 'http://www.w3.org/2000/svg';
+            var svg = document.getElementById('autoSvg');
+            var container = document.getElementById('autoNodesContainer');
+            var thinking = document.getElementById('autoThinking');
+            var parallel = document.getElementById('autoParallel');
+
+            var taskPool = [
+                { icon: '⚙️', name: 'Engine', grad: '#e5853a, #f0a060' },
+                { icon: '🎨', name: 'Renderer', grad: '#c471ed, #f64f59' },
+                { icon: '🎮', name: 'Logic', grad: '#11998e, #38ef7d' },
+                { icon: '🖥️', name: 'UI', grad: '#4facfe, #00f2fe' },
+                { icon: '🗄️', name: 'Data', grad: '#fa709a, #fee140' },
+                { icon: '🔌', name: 'API', grad: '#a18cd1, #fbc2eb' },
+                { icon: '🧪', name: 'Test', grad: '#ffecd2, #fcb69f' },
+                { icon: '🔐', name: 'Auth', grad: '#667eea, #764ba2' },
+                { icon: '📡', name: 'Network', grad: '#00ccff, #5f27cd' },
+                { icon: '💾', name: 'Storage', grad: '#f093fb, #f5576c' },
+                { icon: '📊', name: 'Analytics', grad: '#ff6b6b, #ffa502' },
+                { icon: '🛡️', name: 'Security', grad: '#00ff88, #00ccff' },
+                { icon: '⚡', name: 'Cache', grad: '#e5853a, #c471ed' },
+                { icon: '🔄', name: 'Sync', grad: '#38ef7d, #4facfe' },
+                { icon: '📦', name: 'Deploy', grad: '#fee140, #a18cd1' },
+            ];
+
+            var thinkingTexts = [
+                'Analyzing task...',
+                'Decomposing modules...',
+                'Planning execution...',
+                'Identifying dependencies...',
+                'Evaluating architecture...',
+                'Selecting components...',
+            ];
+
+            var parallelTexts = [
+                'parallel execution',
+                'concurrent processing',
+                'multi-agent running',
+            ];
+
+            // Position slots around center (evenly spaced on ellipse)
+            function getSlots(count) {
+                var slots = [];
+                var cx = 50, cy = 46, rx = 38, ry = 36;
+                var startAngle = -Math.PI / 2; // top
+                for (var i = 0; i < count; i++) {
+                    var angle = startAngle + (2 * Math.PI * i / count);
+                    slots.push({
+                        x: cx + rx * Math.cos(angle),
+                        y: cy + ry * Math.sin(angle)
+                    });
+                }
+                return slots;
+            }
+
+            function shuffle(arr) {
+                var a = arr.slice();
+                for (var i = a.length - 1; i > 0; i--) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    var t = a[i]; a[i] = a[j]; a[j] = t;
+                }
+                return a;
+            }
+
+            function clearAuto() {
+                svg.innerHTML = '';
+                container.innerHTML = '';
+                thinking.classList.remove('visible');
+                parallel.classList.remove('visible');
+            }
+
+            function runCycle() {
+                clearAuto();
+
+                // Pick 3-6 random tasks
+                var count = 3 + Math.floor(Math.random() * 4);
+                var chosen = shuffle(taskPool).slice(0, count);
+                var slots = getSlots(count);
+
+                // Phase 1: thinking
+                thinking.textContent = thinkingTexts[Math.floor(Math.random() * thinkingTexts.length)];
+                thinking.classList.add('visible');
+
+                // Create SVG lines + DOM nodes (hidden initially)
+                var lines = [];
+                var dispatches = [];
+                var nodes = [];
+
+                chosen.forEach(function(task, i) {
+                    var s = slots[i];
+
+                    // Background line
+                    var bg = document.createElementNS(SVG_NS, 'line');
+                    bg.setAttribute('class', 'auto-line');
+                    bg.setAttribute('x1', '50'); bg.setAttribute('y1', '46');
+                    bg.setAttribute('x2', s.x); bg.setAttribute('y2', s.y);
+                    svg.appendChild(bg);
+                    lines.push(bg);
+
+                    // Dispatch line
+                    var dl = document.createElementNS(SVG_NS, 'line');
+                    dl.setAttribute('class', 'auto-dispatch');
+                    dl.setAttribute('x1', '50'); dl.setAttribute('y1', '46');
+                    dl.setAttribute('x2', s.x); dl.setAttribute('y2', s.y);
+                    svg.appendChild(dl);
+                    dispatches.push(dl);
+
+                    // Task node
+                    var node = document.createElement('div');
+                    node.className = 'auto-task-node';
+                    node.style.top = s.y + '%';
+                    node.style.left = s.x + '%';
+                    node.innerHTML =
+                        '<div class="wf-node-icon" style="background: linear-gradient(135deg, ' + task.grad + ');">' + task.icon + '</div>' +
+                        '<div class="wf-node-name">' + task.name + '</div>';
+                    container.appendChild(node);
+                    nodes.push(node);
+                });
+
+                // Phase 2: spawn nodes one by one
+                var baseDelay = 1200;
+                var spawnInterval = 350;
+                var spawnOrder = shuffle(Array.from({length: count}, function(_, i) { return i; }));
+
+                spawnOrder.forEach(function(idx, i) {
+                    setTimeout(function() {
+                        if (i === 0) thinking.classList.remove('visible');
+                        dispatches[idx].classList.add('active');
+                        nodes[idx].classList.add('spawned');
+                        // Fade dispatch line after a bit
+                        setTimeout(function() {
+                            dispatches[idx].classList.remove('active');
+                        }, 600);
+                    }, baseDelay + i * spawnInterval);
+                });
+
+                // Phase 3: parallel execution
+                var parallelDelay = baseDelay + count * spawnInterval + 800;
+                setTimeout(function() {
+                    var activeCount = Math.min(count, 2 + Math.floor(Math.random() * 2));
+                    var active = shuffle(spawnOrder).slice(0, activeCount);
+                    active.forEach(function(idx) {
+                        nodes[idx].classList.add('active');
+                        dispatches[idx].classList.add('active');
+                    });
+                    parallel.textContent = '\u26A1 ' + parallelTexts[Math.floor(Math.random() * parallelTexts.length)];
+                    parallel.classList.add('visible');
+                }, parallelDelay);
+
+                // Phase 4: reset and next cycle
+                var totalDuration = parallelDelay + 2800;
+                setTimeout(runCycle, totalDuration);
+            }
+
+            runCycle();
         })();
     </script>
 </body>
