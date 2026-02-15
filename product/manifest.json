@@ -1,4 +1,5 @@
 [
   { "file": "shooting-game.html", "title": "Space Shooter", "icon": "🚀" },
-  { "file": "mario.html", "title": "Super Pixel Bros", "icon": "🍄" }
+  { "file": "mario.html", "title": "Super Pixel Bros", "icon": "🍄" },
+  { "file": "fight.html", "title": "街头格斗", "icon": "🥊" }
 ]
