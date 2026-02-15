@@ -232,6 +232,76 @@
         footer a:hover {
             color: #fff;
         }
+        /* Product Section */
+        .product-section {
+            margin-bottom: 100px;
+        }
+        .product-desc {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+        }
+        .product-scroll {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 10px 0 20px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+        .product-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+        .product-scroll::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.03);
+            border-radius: 2px;
+        }
+        .product-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.12);
+            border-radius: 2px;
+        }
+        .product-card {
+            flex: 0 0 200px;
+            scroll-snap-align: start;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 25px 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .product-card:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-4px);
+        }
+        .product-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+        .product-title {
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .product-file {
+            font-size: 10px;
+            color: rgba(255,255,255,0.3);
+            letter-spacing: 1px;
+        }
+        .product-empty {
+            text-align: center;
+            color: rgba(255,255,255,0.25);
+            font-size: 12px;
+            letter-spacing: 1px;
+            padding: 40px 0;
+        }
         /* Workflow Section */
         .workflow-section {
             margin-bottom: 100px;
@@ -794,6 +864,14 @@
             </div>
         </section>
 
+        <section class="product-section">
+            <h2 class="section-title">Product</h2>
+            <p class="product-desc">OpenTeam 开发的产品</p>
+            <div class="product-scroll" id="productList">
+                <p class="product-empty">Loading...</p>
+            </div>
+        </section>
+
         <section class="activity-section">
             <h2 class="activity-title">Activity</h2>
             <div class="activity-list" id="activityList">
@@ -1135,6 +1213,32 @@
             }
 
             runCycle();
+        })();
+
+        // Product list — fetch manifest and render cards
+        (function() {
+            fetch('product/manifest.json')
+                .then(function(res) { return res.json(); })
+                .then(function(products) {
+                    var container = document.getElementById('productList');
+                    if (!products || products.length === 0) {
+                        container.innerHTML = '<p class="product-empty">暂无产品</p>';
+                        return;
+                    }
+                    container.innerHTML = products.map(function(p) {
+                        var icon = p.icon || '📦';
+                        var title = p.title || p.file;
+                        return '<a class="product-card" href="product/' + p.file + '" target="_blank">' +
+                            '<div class="product-icon">' + icon + '</div>' +
+                            '<div class="product-title">' + title + '</div>' +
+                            '<div class="product-file">' + p.file + '</div>' +
+                            '</a>';
+                    }).join('');
+                })
+                .catch(function() {
+                    document.getElementById('productList').innerHTML =
+                        '<p class="product-empty">暂无产品</p>';
+                });
         })();
     </script>
 </body>
