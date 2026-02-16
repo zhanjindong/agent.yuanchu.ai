@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>比鸡游戏记分器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; padding: 20px; color: #fff; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 20px; font-size: 28px; color: #ffd700; }
+        
+        /* Setup Section */
+        .setup-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .setup-title { font-size: 16px; color: #ffd700; margin-bottom: 16px; }
+        .row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; }
+        .field { flex: 1; min-width: 200px; }
+        .field label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; }
+        .field input { width: 100%; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(0,0,0,0.3); color: #fff; font-size: 14px; }
+        .field input:focus { outline: none; border-color: #ffd700; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; font-weight: 600; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255,215,0,0.4); }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-success { background: #28a745; color: #fff; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        
+        /* Players List */
+        .players-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .players-title { font-size: 16px; color: #ffd700; margin-bottom: 16px; }
+        .players-list { display: flex; flex-wrap: wrap; gap: 12px; }
+        .player-tag { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 20px; font-size: 14px; }
+        .player-tag .remove { cursor: pointer; color: #ff6b6b; font-size: 16px; }
+        .player-tag .remove:hover { color: #dc3545; }
+        .player-tag .lucky { cursor: pointer; color: #ffd700; font-size: 16px; }
+        .player-tag .lucky:hover { color: #ff8c00; }
+        .player-score { font-weight: bold; color: #ffd700; }
+        
+        /* Game Area */
+        .game-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .round-info { font-size: 18px; color: #ffd700; }
+        .round-info span { font-weight: bold; }
+        
+        /* Ranking Grid */
+        .ranking-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .ranking-title { font-size: 16px; color: #ffd700; margin-bottom: 16px; }
+        .ranking-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+        .ranking-lane { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; border: 2px solid transparent; transition: all 0.3s; }
+        .ranking-lane:hover { border-color: rgba(255,215,0,0.3); }
+        .ranking-lane-title { font-size: 14px; color: #888; margin-bottom: 12px; display: flex; justify-content: space-between; }
+        .ranking-lane .winner { color: #ffd700; font-weight: bold; }
+        .ranking-players { display: flex; flex-direction: column; gap: 8px; }
+        .ranking-player { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+        .ranking-player:hover { background: rgba(255,255,255,0.1); }
+        .ranking-player.selected { border-color: #ffd700; background: rgba(255,215,0,0.1); }
+        .ranking-player .rank { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
+        .ranking-player .rank.gold { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; }
+        .ranking-player .rank.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #000; }
+        .ranking-player .rank.bronze { background: linear-gradient(135deg, #cd7f32, #8b4513); color: #fff; }
+        .ranking-player .name { flex: 1; }
+        .ranking-player .money { font-weight: bold; color: #ff6b6b; }
+        
+        /* Results */
+        .results-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .results-title { font-size: 16px; color: #ffd700; margin-bottom: 16px; }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .result-card { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; text-align: center; }
+        .result-card.winner { border: 2px solid #ffd700; }
+        .result-card.loser { border: 2px solid #dc3545; }
+        .result-name { font-size: 14px; color: #888; margin-bottom: 8px; }
+        .result-money { font-size: 24px; font-weight: bold; }
+        .result-money.positive { color: #28a745; }
+        .result-money.negative { color: #dc3545; }
+        .lucky-badge { display: inline-block; padding: 4px 8px; background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 4px; color: #000; font-size: 10px; font-weight: bold; margin-top: 8px; }
+        
+        /* Lucky Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 16px; padding: 30px; max-width: 400px; width: 90%; border: 1px solid rgba(255,255,255,0.1); }
+        .modal-title { font-size: 18px; color: #ffd700; margin-bottom: 20px; text-align: center; }
+        .modal-buttons { display: flex; gap: 12px; margin-top: 20px; }
+        .modal-buttons .btn { flex: 1; }
+        
+        /* Summary */
+        .summary-section { background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,140,0,0.1)); border-radius: 16px; padding: 24px; border: 2px solid rgba(255,215,0,0.3); }
+        .summary-title { font-size: 18px; color: #ffd700; margin-bottom: 16px; text-align: center; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+        .summary-card { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 16px; text-align: center; }
+        .summary-card .name { font-size: 14px; color: #888; margin-bottom: 8px; }
+        .summary-card .total { font-size: 28px; font-weight: bold; }
+        .summary-card .total.win { color: #28a745; }
+        .summary-card .total.lose { color: #dc3545; }
+        
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+        
+        @media (max-width: 768px) {
+            .row { flex-direction: column; }
+            .field { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐔 比鸡游戏记分器</h1>
+        
+        <!-- Setup Section -->
+        <div class="setup-section">
+            <div class="setup-title">⚙️ 游戏设置</div>
+            <div class="row">
+                <div class="field">
+                    <label>档位金额（逗号分隔，如：5,10,15）</label>
+                    <input type="text" id="tierMoney" value="5,10,15" placeholder="5,10,15">
+                </div>
+                <div class="field">
+                    <label>喜钱默认金额</label>
+                    <input type="number" id="luckyMoney" value="20" min="1">
+                </div>
+            </div>
+            <div class="row">
+                <div class="field">
+                    <label>添加玩家姓名</label>
+                    <input type="text" id="playerName" placeholder="输入姓名后按回车添加">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Players Section -->
+        <div class="players-section">
+            <div class="players-title">👥 玩家列表 <span id="playerCount">(0人)</span></div>
+            <div class="players-list" id="playersList">
+                <div class="empty-state">
+                    <div class="icon">👆</div>
+                    <div>添加玩家后开始游戏</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Section -->
+        <div class="game-section" id="gameSection" style="display: none;">
+            <div class="game-header">
+                <div class="round-info">第 <span id="currentRound">1</span> 轮</div>
+                <div>
+                    <button class="btn btn-secondary btn-sm" onclick="resetRound()">重新开始本轮</button>
+                    <button class="btn btn-primary" onclick="endRound()">结束本轮</button>
+                </div>
+            </div>
+            
+            <!-- Ranking Section -->
+            <div class="ranking-section">
+                <div class="ranking-title">🃏 牌面大小排名</div>
+                <div class="ranking-grid" id="rankingGrid">
+                    <div class="empty-state">
+                        <div class="icon">👆</div>
+                        <div>点击玩家选择排名</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-title">📊 第 <span id="resultRound">1</span> 轮结算</div>
+            <div class="results-grid" id="resultsGrid"></div>
+        </div>
+        
+        <!-- Summary Section -->
+        <div class="summary-section" id="summarySection" style="display: none;">
+            <div class="summary-title">🏆 累计结算</div>
+            <div class="summary-grid" id="summaryGrid"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="newGame()">🔄 新游戏</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lucky Money Modal -->
+    <div class="modal" id="luckyModal">
+        <div class="modal-content">
+            <div class="modal-title">🎁 设置喜钱</div>
+            <div class="field">
+                <label>喜钱金额</label>
+                <input type="number" id="luckyAmount" value="20" min="1">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeLuckyModal()">取消</button>
+                <button class="btn btn-primary" onclick="confirmLucky()">确定</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Game State
+        let players = [];
+        let tierMoney = [5, 10, 15];
+        let luckyDefault = 20;
+        let round = 0;
+        let roundResults = [];
+        let totalResults = {};
+        let currentRanking = [];
+        let selectedPlayer = null;
+        let luckyTarget = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('tierMoney').addEventListener('change', parseTierMoney);
+            document.getElementById('luckyMoney').addEventListener('change', (e) => luckyDefault = parseInt(e.target.value) || 20);
+            document.getElementById('playerName').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addPlayer();
+            });
+        });
+        
+        function parseTierMoney() {
+            const val = document.getElementById('tierMoney').value;
+            tierMoney = val.split(',').map(x => parseInt(x.trim()) || 0).filter(x => x > 0);
+        }
+        
+        function addPlayer() {
+            const input = document.getElementById('playerName');
+            const name = input.value.trim();
+            if (!name) return;
+            if (players.find(p => p.name === name)) {
+                alert('玩家已存在！');
+                return;
+            }
+            players.push({ name, lucky: [], luckyEdit: false });
+            input.value = '';
+            renderPlayers();
+            updateTotalResults();
+        }
+        
+        function removePlayer(index) {
+            players.splice(index, 1);
+            renderPlayers();
+            updateTotalResults();
+        }
+        
+        function renderPlayers() {
+            const container = document.getElementById('playersList');
+            const count = document.getElementById('playerCount');
+            count.textContent = `(${players.length}人)`;
+            
+            if (players.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">👆</div>
+                        <div>添加玩家后开始游戏</div>
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = players.map((p, i) => `
+                <div class="player-tag">
+                    <span>${p.name}</span>
+                    <span class="lucky" onclick="openLuckyModal(${i})" title="设置喜钱">💰</span>
+                    <span class="remove" onclick="removePlayer(${i})">×</span>
+                </div>
+            `).join('');
+        }
+        
+        function openLuckyModal(index) {
+            luckyTarget = index;
+            document.getElementById('luckyAmount').value = luckyDefault;
+            document.getElementById('luckyModal').classList.add('active');
+        }
+        
+        function closeLuckyModal() {
+            document.getElementById('luckyModal').classList.remove('active');
+            luckyTarget = null;
+        }
+        
+        function confirmLucky() {
+            if (luckyTarget === null) return;
+            const amount = parseInt(document.getElementById('luckyAmount').value) || luckyDefault;
+            players[luckyTarget].lucky.push(amount);
+            luckyDefault = amount;
+            closeLuckyModal();
+        }
+        
+        function startGame() {
+            if (players.length < 2) {
+                alert('至少需要2名玩家！');
+                return;
+            }
+            round = 1;
+            roundResults = [];
+            players.forEach(p => p.lucky = []);
+            currentRanking = [];
+            document.getElementById('gameSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('summarySection').style.display = 'none';
+            document.getElementById('currentRound').textContent = round;
+            renderRanking();
+        }
+        
+        function renderRanking() {
+            const container = document.getElementById('rankingGrid');
+            const tiers = tierMoney.slice(0, players.length - 1);
+            
+            container.innerHTML = tiers.map((money, i) => `
+                <div class="ranking-lane">
+                    <div class="ranking-lane-title">
+                        <span>第 ${i + 1} 道</span>
+                        <span class="winner">${money}元</span>
+                    </div>
+                    <div class="ranking-players">
+                        ${players.map((p, pi) => `
+                            <div class="ranking-player ${currentRanking.includes(pi) ? 'selected' : ''}" 
+                                 onclick="selectRank(${pi}, ${i})">
+                                <div class="rank">${i + 1}</div>
+                                <div class="name">${p.name}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function selectRank(playerIndex, tierIndex) {
+            const existingIndex = currentRanking.indexOf(playerIndex);
+            if (existingIndex !== -1) {
+                currentRanking.splice(existingIndex, 1);
+            }
+            currentRanking[playerIndex] = tierIndex;
+            renderRanking();
+        }
+        
+        function resetRound() {
+            currentRanking = [];
+            renderRanking();
+        }
+        
+        function endRound() {
+            // Validate all players have ranking
+            const rankedPlayers = currentRanking.filter(x => x !== undefined).length;
+            if (rankedPlayers < players.length) {
+                alert('请为所有玩家分配排名！');
+                return;
+            }
+            
+            // Calculate round results
+            const tiers = tierMoney.slice(0, players.length - 1);
+            const results = players.map((p, i) => {
+                const rank = currentRanking[i];
+                const money = -tiers[rank] || 0;
+                const luckyAmount = p.lucky.reduce((a, b) => a + b, 0);
+                return {
+                    name: p.name,
+                    money,
+                    lucky: luckyAmount,
+                    total: money - luckyAmount
+                };
+            });
+            
+            // Give money to winners
+            tiers.forEach((tierAmt, rank) => {
+                const winnerIndex = players.findIndex((p, i) => currentRanking[i] === rank);
+                if (winnerIndex !== -1) {
+                    results[winnerIndex].money += tierAmt * (players.length - 1);
+                    results[winnerIndex].total += tierAmt * (players.length - 1);
+                }
+            });
+            
+            // Update totals
+            results.forEach((r, i) => {
+                if (!totalResults[r.name]) totalResults[r.name] = 0;
+                totalResults[r.name] += r.total;
+            });
+            
+            roundResults.push(results);
+            
+            // Show results
+            document.getElementById('resultRound').textContent = round;
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('summarySection').style.display = 'block';
+            
+            renderResults(results);
+            renderSummary();
+            
+            // Next round
+            round++;
+            currentRanking = [];
+            document.getElementById('currentRound').textContent = round;
+            renderRanking();
+        }
+        
+        function renderResults(results) {
+            const container = document.getElementById('resultsGrid');
+            container.innerHTML = results.map(r => `
+                <div class="result-card ${r.total > 0 ? 'winner' : r.total < 0 ? 'loser' : ''}">
+                    <div class="result-name">${r.name}</div>
+                    <div class="result-money ${r.total > 0 ? 'positive' : r.total < 0 ? 'negative' : ''}">
+                        ${r.total > 0 ? '+' : ''}${r.total}
+                    </div>
+                    ${r.lucky > 0 ? `<div class="lucky-badge">喜钱 -${r.lucky}</div>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function renderSummary() {
+            const container = document.getElementById('summaryGrid');
+            const sorted = Object.entries(totalResults).sort((a, b) => b[1] - a[1]);
+            
+            container.innerHTML = sorted.map(([name, total]) => `
+                <div class="summary-card">
+                    <div class="name">${name}</div>
+                    <div class="total ${total > 0 ? 'win' : total < 0 ? 'lose' : ''}">
+                        ${total > 0 ? '+' : ''}${total}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function updateTotalResults() {
+            totalResults = {};
+            roundResults.flat().forEach(r => {
+                totalResults[r.name] = (totalResults[r.name] || 0) + r.total;
+            });
+            renderSummary();
+        }
+        
+        function newGame() {
+            if (confirm('确定开始新游戏？当前数据将清除！')) {
+                round = 0;
+                roundResults = [];
+                totalResults = {};
+                players.forEach(p => p.lucky = []);
+                currentRanking = [];
+                document.getElementById('gameSection').style.display = 'none';
+                document.getElementById('resultsSection').style.display = 'none';
+                document.getElementById('summarySection').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
