@@ -2,439 +2,741 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>比鸡游戏记分器</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; padding: 20px; color: #fff; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 { text-align: center; margin-bottom: 20px; font-size: 28px; color: #ffd700; }
-        
-        /* Setup Section */
-        .setup-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .setup-title { font-size: 16px; color: #ffd700; margin-bottom: 16px; }
-        .row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; }
-        .field { flex: 1; min-width: 200px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; padding: 16px; color: #fff; -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 500px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 16px; font-size: 24px; color: #ffd700; }
+
+        .card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1); }
+        .card-title { font-size: 15px; color: #ffd700; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+
+        .field { margin-bottom: 12px; }
         .field label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; }
-        .field input { width: 100%; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(0,0,0,0.3); color: #fff; font-size: 14px; }
+        .field input { width: 100%; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(0,0,0,0.3); color: #fff; font-size: 15px; }
         .field input:focus { outline: none; border-color: #ffd700; }
-        
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+
+        .row { display: flex; gap: 10px; }
+        .row .field { flex: 1; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn:active { transform: scale(0.96); }
         .btn-primary { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; font-weight: 600; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255,215,0,0.4); }
         .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
-        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
-        .btn-danger { background: #dc3545; color: #fff; }
-        .btn-success { background: #28a745; color: #fff; }
+        .btn-danger { background: rgba(220,53,69,0.8); color: #fff; }
+        .btn-success { background: rgba(40,167,69,0.8); color: #fff; }
         .btn-sm { padding: 6px 12px; font-size: 12px; }
-        
-        /* Players List */
-        .players-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .players-title { font-size: 16px; color: #ffd700; margin-bottom: 16px; }
-        .players-list { display: flex; flex-wrap: wrap; gap: 12px; }
-        .player-tag { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 20px; font-size: 14px; }
-        .player-tag .remove { cursor: pointer; color: #ff6b6b; font-size: 16px; }
-        .player-tag .remove:hover { color: #dc3545; }
-        .player-tag .lucky { cursor: pointer; color: #ffd700; font-size: 16px; }
-        .player-tag .lucky:hover { color: #ff8c00; }
-        .player-score { font-weight: bold; color: #ffd700; }
-        
-        /* Game Area */
-        .game-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .round-info { font-size: 18px; color: #ffd700; }
-        .round-info span { font-weight: bold; }
-        
-        /* Ranking Grid */
-        .ranking-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .ranking-title { font-size: 16px; color: #ffd700; margin-bottom: 16px; }
-        .ranking-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-        .ranking-lane { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; border: 2px solid transparent; transition: all 0.3s; }
-        .ranking-lane:hover { border-color: rgba(255,215,0,0.3); }
-        .ranking-lane-title { font-size: 14px; color: #888; margin-bottom: 12px; display: flex; justify-content: space-between; }
-        .ranking-lane .winner { color: #ffd700; font-weight: bold; }
-        .ranking-players { display: flex; flex-direction: column; gap: 8px; }
-        .ranking-player { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
-        .ranking-player:hover { background: rgba(255,255,255,0.1); }
-        .ranking-player.selected { border-color: #ffd700; background: rgba(255,215,0,0.1); }
-        .ranking-player .rank { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
-        .ranking-player .rank.gold { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; }
-        .ranking-player .rank.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #000; }
-        .ranking-player .rank.bronze { background: linear-gradient(135deg, #cd7f32, #8b4513); color: #fff; }
-        .ranking-player .name { flex: 1; }
-        .ranking-player .money { font-weight: bold; color: #ff6b6b; }
-        
-        /* Results */
-        .results-section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .results-title { font-size: 16px; color: #ffd700; margin-bottom: 16px; }
-        .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-        .result-card { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; text-align: center; }
-        .result-card.winner { border: 2px solid #ffd700; }
-        .result-card.loser { border: 2px solid #dc3545; }
-        .result-name { font-size: 14px; color: #888; margin-bottom: 8px; }
-        .result-money { font-size: 24px; font-weight: bold; }
+        .btn-block { width: 100%; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .player-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .player-tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 20px; font-size: 14px; }
+        .player-tag .remove { cursor: pointer; color: #ff6b6b; font-size: 18px; line-height: 1; }
+        .add-player-row { display: flex; gap: 8px; }
+        .add-player-row input { flex: 1; }
+        .add-player-row .btn { white-space: nowrap; }
+
+        .tier-inputs { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tier-input { width: 70px; }
+        .tier-input input { width: 100%; padding: 8px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(0,0,0,0.3); color: #fff; font-size: 14px; text-align: center; }
+        .tier-input input:focus { outline: none; border-color: #ffd700; }
+        .tier-label { font-size: 10px; color: #888; text-align: center; margin-top: 4px; }
+
+        .lane-tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+        .lane-tab { flex: 1; padding: 10px; text-align: center; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.05); color: #888; border: 2px solid transparent; }
+        .lane-tab.active { background: rgba(255,215,0,0.15); color: #ffd700; border-color: rgba(255,215,0,0.5); }
+        .lane-tab.done { background: rgba(40,167,69,0.15); color: #28a745; border-color: rgba(40,167,69,0.3); }
+        .lane-tab.done.active { border-color: #28a745; }
+
+        .player-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .player-btn { padding: 16px 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #fff; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-align: center; position: relative; min-height: 56px; display: flex; align-items: center; justify-content: center; }
+        .player-btn:active { transform: scale(0.96); }
+        .player-btn.selected { border-color: #ffd700; background: rgba(255,215,0,0.15); color: #ffd700; cursor: default; }
+        .player-btn .rank-badge { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+        .rank-1 { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; }
+        .rank-2 { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #000; }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32, #8b4513); color: #fff; }
+        .rank-other { background: rgba(255,255,255,0.2); color: #fff; }
+
+        .lane-ranking { font-size: 13px; color: #aaa; margin-bottom: 10px; min-height: 20px; }
+        .lane-ranking span { color: #ffd700; }
+
+        .lane-actions { display: flex; gap: 8px; }
+
+        .lucky-section { margin-top: 4px; }
+        .lucky-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .lucky-row:last-child { border-bottom: none; }
+        .lucky-name { font-size: 14px; flex: 1; }
+        .lucky-controls { display: flex; align-items: center; gap: 8px; }
+        .lucky-count { font-size: 16px; font-weight: 600; color: #ffd700; min-width: 24px; text-align: center; }
+        .lucky-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .lucky-btn:active { transform: scale(0.9); }
+        .lucky-btn.plus { border-color: rgba(255,215,0,0.5); color: #ffd700; }
+
+        .round-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .round-label { font-size: 18px; color: #ffd700; font-weight: 600; }
+
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .result-card { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 14px; text-align: center; border: 2px solid transparent; }
+        .result-card.win { border-color: rgba(40,167,69,0.5); }
+        .result-card.lose { border-color: rgba(220,53,69,0.3); }
+        .result-name { font-size: 13px; color: #aaa; margin-bottom: 6px; }
+        .result-money { font-size: 22px; font-weight: 700; }
         .result-money.positive { color: #28a745; }
         .result-money.negative { color: #dc3545; }
-        .lucky-badge { display: inline-block; padding: 4px 8px; background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 4px; color: #000; font-size: 10px; font-weight: bold; margin-top: 8px; }
-        
-        /* Lucky Modal */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
-        .modal.active { display: flex; }
-        .modal-content { background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 16px; padding: 30px; max-width: 400px; width: 90%; border: 1px solid rgba(255,255,255,0.1); }
-        .modal-title { font-size: 18px; color: #ffd700; margin-bottom: 20px; text-align: center; }
-        .modal-buttons { display: flex; gap: 12px; margin-top: 20px; }
-        .modal-buttons .btn { flex: 1; }
-        
-        /* Summary */
-        .summary-section { background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,140,0,0.1)); border-radius: 16px; padding: 24px; border: 2px solid rgba(255,215,0,0.3); }
-        .summary-title { font-size: 18px; color: #ffd700; margin-bottom: 16px; text-align: center; }
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
-        .summary-card { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 16px; text-align: center; }
-        .summary-card .name { font-size: 14px; color: #888; margin-bottom: 8px; }
-        .summary-card .total { font-size: 28px; font-weight: bold; }
-        .summary-card .total.win { color: #28a745; }
-        .summary-card .total.lose { color: #dc3545; }
-        
-        .empty-state { text-align: center; padding: 40px; color: #666; }
-        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
-        
-        @media (max-width: 768px) {
-            .row { flex-direction: column; }
-            .field { min-width: 100%; }
+        .result-money.zero { color: #888; }
+        .result-detail { font-size: 11px; color: #666; margin-top: 6px; }
+        .lucky-badge { display: inline-block; padding: 2px 8px; background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 4px; color: #000; font-size: 10px; font-weight: 600; margin-top: 6px; }
+
+        .history-toggle { cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+        .history-toggle .arrow { transition: transform 0.2s; }
+        .history-toggle .arrow.open { transform: rotate(180deg); }
+        .history-item { background: rgba(0,0,0,0.15); border-radius: 10px; padding: 12px; margin-top: 10px; }
+        .history-item-title { font-size: 13px; color: #888; margin-bottom: 8px; }
+        .history-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+        .history-row .name { color: #aaa; }
+        .history-row .amount.pos { color: #28a745; }
+        .history-row .amount.neg { color: #dc3545; }
+
+        .final-section { background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,140,0,0.05)); border: 2px solid rgba(255,215,0,0.3); }
+        .final-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .final-card { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 16px; text-align: center; }
+        .final-card .name { font-size: 14px; color: #aaa; margin-bottom: 8px; }
+        .final-card .total { font-size: 28px; font-weight: 700; }
+        .final-card .total.win { color: #28a745; }
+        .final-card .total.lose { color: #dc3545; }
+        .final-card .total.zero { color: #888; }
+        .zero-sum { text-align: center; font-size: 12px; color: #666; margin-top: 12px; }
+        .zero-sum.ok { color: #28a745; }
+        .zero-sum.err { color: #dc3545; }
+
+        .confirm-bar { display: flex; gap: 8px; margin-top: 14px; }
+        .confirm-bar .btn { flex: 1; }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 360px) {
+            .player-grid { grid-template-columns: 1fr; }
+            .result-grid { grid-template-columns: 1fr; }
+            .final-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🐔 比鸡游戏记分器</h1>
-        
-        <!-- Setup Section -->
-        <div class="setup-section">
-            <div class="setup-title">⚙️ 游戏设置</div>
-            <div class="row">
-                <div class="field">
-                    <label>档位金额（逗号分隔，如：5,10,15）</label>
-                    <input type="text" id="tierMoney" value="5,10,15" placeholder="5,10,15">
-                </div>
-                <div class="field">
-                    <label>喜钱默认金额</label>
-                    <input type="number" id="luckyMoney" value="20" min="1">
-                </div>
-            </div>
-            <div class="row">
-                <div class="field">
-                    <label>添加玩家姓名</label>
-                    <input type="text" id="playerName" placeholder="输入姓名后按回车添加">
-                </div>
-            </div>
-        </div>
-        
-        <!-- Players Section -->
-        <div class="players-section">
-            <div class="players-title">👥 玩家列表 <span id="playerCount">(0人)</span></div>
-            <div class="players-list" id="playersList">
-                <div class="empty-state">
-                    <div class="icon">👆</div>
-                    <div>添加玩家后开始游戏</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Game Section -->
-        <div class="game-section" id="gameSection" style="display: none;">
-            <div class="game-header">
-                <div class="round-info">第 <span id="currentRound">1</span> 轮</div>
-                <div>
-                    <button class="btn btn-secondary btn-sm" onclick="resetRound()">重新开始本轮</button>
-                    <button class="btn btn-primary" onclick="endRound()">结束本轮</button>
-                </div>
-            </div>
-            
-            <!-- Ranking Section -->
-            <div class="ranking-section">
-                <div class="ranking-title">🃏 牌面大小排名</div>
-                <div class="ranking-grid" id="rankingGrid">
-                    <div class="empty-state">
-                        <div class="icon">👆</div>
-                        <div>点击玩家选择排名</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Results Section -->
-        <div class="results-section" id="resultsSection" style="display: none;">
-            <div class="results-title">📊 第 <span id="resultRound">1</span> 轮结算</div>
-            <div class="results-grid" id="resultsGrid"></div>
-        </div>
-        
-        <!-- Summary Section -->
-        <div class="summary-section" id="summarySection" style="display: none;">
-            <div class="summary-title">🏆 累计结算</div>
-            <div class="summary-grid" id="summaryGrid"></div>
-            <div style="text-align: center; margin-top: 20px;">
-                <button class="btn btn-secondary" onclick="newGame()">🔄 新游戏</button>
-            </div>
-        </div>
+        <h1>🐔 比鸡记分器</h1>
+        <div id="app"></div>
     </div>
-    
-    <!-- Lucky Money Modal -->
-    <div class="modal" id="luckyModal">
-        <div class="modal-content">
-            <div class="modal-title">🎁 设置喜钱</div>
-            <div class="field">
-                <label>喜钱金额</label>
-                <input type="number" id="luckyAmount" value="20" min="1">
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-secondary" onclick="closeLuckyModal()">取消</button>
-                <button class="btn btn-primary" onclick="confirmLucky()">确定</button>
-            </div>
-        </div>
-    </div>
-    
+
     <script>
-        // Game State
-        let players = [];
-        let tierMoney = [5, 10, 15];
-        let luckyDefault = 20;
-        let round = 0;
-        let roundResults = [];
-        let totalResults = {};
-        let currentRanking = [];
-        let selectedPlayer = null;
-        let luckyTarget = null;
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('tierMoney').addEventListener('change', parseTierMoney);
-            document.getElementById('luckyMoney').addEventListener('change', (e) => luckyDefault = parseInt(e.target.value) || 20);
-            document.getElementById('playerName').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') addPlayer();
-            });
-        });
-        
-        function parseTierMoney() {
-            const val = document.getElementById('tierMoney').value;
-            tierMoney = val.split(',').map(x => parseInt(x.trim()) || 0).filter(x => x > 0);
+    // ====== State ======
+    const DEFAULT_STATE = {
+        phase: 'setup',
+        config: {
+            players: ['玩家1', '玩家2', '玩家3', '玩家4'],
+            tiers: [5, 10, 15],
+            luckyMoney: 50
+        },
+        currentRound: 1,
+        currentRoundData: {
+            lanes: [[], [], []],
+            currentLane: 0,
+            luckyMap: {}
+        },
+        rounds: [],
+        totals: {}
+    };
+
+    let S = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    let historyOpen = false;
+
+    // ====== Persistence ======
+    const STORAGE_KEY = 'chicken_scorer_state';
+
+    function saveState() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
+        } catch (e) {}
+    }
+
+    function loadState() {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) return JSON.parse(data);
+        } catch (e) {}
+        return null;
+    }
+
+    function clearState() {
+        try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    }
+
+    // ====== Score Engine ======
+    function calculateLaneScore(laneRanking, tiers, numPlayers) {
+        const scores = {};
+        for (let i = 0; i < numPlayers; i++) scores[i] = 0;
+        if (laneRanking.length !== numPlayers) return scores;
+
+        const winnerIdx = laneRanking[0];
+        let winnerTotal = 0;
+
+        for (let rank = 1; rank < laneRanking.length; rank++) {
+            const playerIdx = laneRanking[rank];
+            const payment = tiers[rank - 1] || 0;
+            scores[playerIdx] = -payment;
+            winnerTotal += payment;
         }
-        
-        function addPlayer() {
-            const input = document.getElementById('playerName');
-            const name = input.value.trim();
-            if (!name) return;
-            if (players.find(p => p.name === name)) {
-                alert('玩家已存在！');
+        scores[winnerIdx] = winnerTotal;
+        return scores;
+    }
+
+    function calculateLuckyScore(luckyMap, numPlayers, luckyMoney) {
+        const scores = {};
+        for (let i = 0; i < numPlayers; i++) scores[i] = 0;
+
+        for (const [pidxStr, count] of Object.entries(luckyMap)) {
+            const pidx = parseInt(pidxStr);
+            if (count <= 0) continue;
+            const earning = count * luckyMoney * (numPlayers - 1);
+            scores[pidx] += earning;
+            const perPersonPay = count * luckyMoney;
+            for (let i = 0; i < numPlayers; i++) {
+                if (i !== pidx) scores[i] -= perPersonPay;
+            }
+        }
+        return scores;
+    }
+
+    function calculateRoundScore() {
+        const n = S.config.players.length;
+        const tiers = S.config.tiers;
+        const totals = {};
+        for (let i = 0; i < n; i++) totals[i] = 0;
+
+        const laneScores = [];
+        for (let l = 0; l < 3; l++) {
+            const ls = calculateLaneScore(S.currentRoundData.lanes[l], tiers, n);
+            laneScores.push(ls);
+            for (let i = 0; i < n; i++) totals[i] += ls[i];
+        }
+
+        const luckyScores = calculateLuckyScore(S.currentRoundData.luckyMap, n, S.config.luckyMoney);
+        for (let i = 0; i < n; i++) totals[i] += luckyScores[i];
+
+        return { laneScores, luckyScores, totals };
+    }
+
+    function validateZeroSum(scores) {
+        const sum = Object.values(scores).reduce((a, b) => a + b, 0);
+        return sum === 0;
+    }
+
+    // ====== Actions ======
+    function addPlayer() {
+        const input = document.getElementById('inp-new-player');
+        const name = (input.value || '').trim();
+        if (!name) return;
+        if (S.config.players.includes(name)) { alert('玩家姓名不能重复！'); return; }
+        if (S.config.players.length >= 8) { alert('最多支持8名玩家！'); return; }
+        S.config.players.push(name);
+        S.config.tiers.push((S.config.tiers[S.config.tiers.length - 1] || 5) + 5);
+        input.value = '';
+        saveState();
+        render();
+        input.focus();
+    }
+
+    function removePlayer(idx) {
+        if (S.config.players.length <= 2) { alert('至少需要2名玩家！'); return; }
+        S.config.players.splice(idx, 1);
+        S.config.tiers = S.config.tiers.slice(0, S.config.players.length - 1);
+        saveState();
+        render();
+    }
+
+    function updateTier(idx, val) {
+        S.config.tiers[idx] = Math.max(0, parseInt(val) || 0);
+        saveState();
+    }
+
+    function updateLuckyMoney(val) {
+        S.config.luckyMoney = Math.max(0, parseInt(val) || 0);
+        saveState();
+    }
+
+    function startGame() {
+        if (S.config.players.length < 2) { alert('至少需要2名玩家！'); return; }
+        if (S.config.players.some(p => !p.trim())) { alert('玩家姓名不能为空！'); return; }
+        const tierCount = S.config.players.length - 1;
+        S.config.tiers = S.config.tiers.slice(0, tierCount);
+        while (S.config.tiers.length < tierCount) S.config.tiers.push((S.config.tiers[S.config.tiers.length - 1] || 5) + 5);
+        S.phase = 'playing';
+        S.currentRound = 1;
+        S.rounds = [];
+        S.totals = {};
+        S.config.players.forEach((_, i) => S.totals[i] = 0);
+        resetRoundData();
+        saveState();
+        render();
+    }
+
+    function resetRoundData() {
+        S.currentRoundData = { lanes: [[], [], []], currentLane: 0, luckyMap: {} };
+    }
+
+    function switchLane(idx) {
+        S.currentRoundData.currentLane = idx;
+        saveState();
+        render();
+    }
+
+    function selectPlayer(playerIdx) {
+        const lane = S.currentRoundData.currentLane;
+        const ranking = S.currentRoundData.lanes[lane];
+        if (ranking.includes(playerIdx)) return;
+        ranking.push(playerIdx);
+
+        if (ranking.length === S.config.players.length) {
+            if (lane < 2) {
+                S.currentRoundData.currentLane = lane + 1;
+            }
+        }
+        saveState();
+        render();
+    }
+
+    function undoLastSelection() {
+        const lane = S.currentRoundData.currentLane;
+        const ranking = S.currentRoundData.lanes[lane];
+        if (ranking.length > 0) {
+            ranking.pop();
+            saveState();
+            render();
+        }
+    }
+
+    function resetCurrentLane() {
+        const lane = S.currentRoundData.currentLane;
+        S.currentRoundData.lanes[lane] = [];
+        saveState();
+        render();
+    }
+
+    function addLucky(pidx) {
+        if (!S.currentRoundData.luckyMap[pidx]) S.currentRoundData.luckyMap[pidx] = 0;
+        S.currentRoundData.luckyMap[pidx]++;
+        saveState();
+        render();
+    }
+
+    function removeLucky(pidx) {
+        if (S.currentRoundData.luckyMap[pidx] > 0) {
+            S.currentRoundData.luckyMap[pidx]--;
+            if (S.currentRoundData.luckyMap[pidx] === 0) delete S.currentRoundData.luckyMap[pidx];
+        }
+        saveState();
+        render();
+    }
+
+    function allLanesDone() {
+        return S.currentRoundData.lanes.every(l => l.length === S.config.players.length);
+    }
+
+    function settleRound() {
+        if (!allLanesDone()) { alert('请完成三道排名后再结算！'); return; }
+
+        const result = calculateRoundScore();
+        const roundRecord = {
+            lanes: S.currentRoundData.lanes.map(l => [...l]),
+            luckyMap: { ...S.currentRoundData.luckyMap },
+            results: { ...result.totals },
+            laneScores: result.laneScores,
+            luckyScores: result.luckyScores
+        };
+        S.rounds.push(roundRecord);
+
+        for (let i = 0; i < S.config.players.length; i++) {
+            S.totals[i] = (S.totals[i] || 0) + result.totals[i];
+        }
+
+        S.phase = 'roundResult';
+        saveState();
+        render();
+    }
+
+    function nextRound() {
+        S.currentRound++;
+        resetRoundData();
+        S.phase = 'playing';
+        saveState();
+        render();
+    }
+
+    function endGame() {
+        if (S.phase === 'playing' && !allLanesDone()) {
+            if (!confirm('当前轮次未完成，确定结束游戏吗？未完成的轮次将不计分。')) return;
+        }
+        if (S.phase === 'playing' && allLanesDone()) {
+            if (confirm('当前轮次已完成排名但未结算，是否先结算本轮？')) {
+                settleRound();
+                S.phase = 'finished';
+                saveState();
+                render();
                 return;
             }
-            players.push({ name, lucky: [], luckyEdit: false });
-            input.value = '';
-            renderPlayers();
-            updateTotalResults();
         }
-        
-        function removePlayer(index) {
-            players.splice(index, 1);
-            renderPlayers();
-            updateTotalResults();
+        S.phase = 'finished';
+        saveState();
+        render();
+    }
+
+    function newGame() {
+        if (!confirm('确定开始新游戏？所有数据将清除！')) return;
+        const players = [...S.config.players];
+        const tiers = [...S.config.tiers];
+        const lucky = S.config.luckyMoney;
+        S = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        S.config.players = players;
+        S.config.tiers = tiers;
+        S.config.luckyMoney = lucky;
+        clearState();
+        render();
+    }
+
+    function restoreGame() {
+        render();
+    }
+
+    function discardRestore() {
+        clearState();
+        S = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        render();
+    }
+
+    function updatePlayerName(idx, val) {
+        S.config.players[idx] = val;
+        saveState();
+    }
+
+    // ====== Render ======
+    function render() {
+        const app = document.getElementById('app');
+        if (S.phase === 'setup') {
+            app.innerHTML = renderSetup();
+        } else if (S.phase === 'playing') {
+            app.innerHTML = renderPlaying();
+        } else if (S.phase === 'roundResult') {
+            app.innerHTML = renderRoundResult();
+        } else if (S.phase === 'finished') {
+            app.innerHTML = renderFinished();
         }
-        
-        function renderPlayers() {
-            const container = document.getElementById('playersList');
-            const count = document.getElementById('playerCount');
-            count.textContent = `(${players.length}人)`;
-            
-            if (players.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="icon">👆</div>
-                        <div>添加玩家后开始游戏</div>
-                    </div>`;
-                return;
-            }
-            
-            container.innerHTML = players.map((p, i) => `
-                <div class="player-tag">
-                    <span>${p.name}</span>
-                    <span class="lucky" onclick="openLuckyModal(${i})" title="设置喜钱">💰</span>
-                    <span class="remove" onclick="removePlayer(${i})">×</span>
-                </div>
-            `).join('');
-        }
-        
-        function openLuckyModal(index) {
-            luckyTarget = index;
-            document.getElementById('luckyAmount').value = luckyDefault;
-            document.getElementById('luckyModal').classList.add('active');
-        }
-        
-        function closeLuckyModal() {
-            document.getElementById('luckyModal').classList.remove('active');
-            luckyTarget = null;
-        }
-        
-        function confirmLucky() {
-            if (luckyTarget === null) return;
-            const amount = parseInt(document.getElementById('luckyAmount').value) || luckyDefault;
-            players[luckyTarget].lucky.push(amount);
-            luckyDefault = amount;
-            closeLuckyModal();
-        }
-        
-        function startGame() {
-            if (players.length < 2) {
-                alert('至少需要2名玩家！');
-                return;
-            }
-            round = 1;
-            roundResults = [];
-            players.forEach(p => p.lucky = []);
-            currentRanking = [];
-            document.getElementById('gameSection').style.display = 'block';
-            document.getElementById('resultsSection').style.display = 'none';
-            document.getElementById('summarySection').style.display = 'none';
-            document.getElementById('currentRound').textContent = round;
-            renderRanking();
-        }
-        
-        function renderRanking() {
-            const container = document.getElementById('rankingGrid');
-            const tiers = tierMoney.slice(0, players.length - 1);
-            
-            container.innerHTML = tiers.map((money, i) => `
-                <div class="ranking-lane">
-                    <div class="ranking-lane-title">
-                        <span>第 ${i + 1} 道</span>
-                        <span class="winner">${money}元</span>
+    }
+
+    function renderSetup() {
+        const players = S.config.players;
+        const tiers = S.config.tiers;
+        const tierCount = Math.max(players.length - 1, 1);
+
+        while (tiers.length < tierCount) tiers.push((tiers[tiers.length - 1] || 5) + 5);
+        if (tiers.length > tierCount) tiers.length = tierCount;
+
+        return `
+        <div class="card">
+            <div class="card-title">👥 玩家管理 <span style="color:#888;font-size:12px;margin-left:auto;">${players.length}人 / ${tierCount}档</span></div>
+            <div class="player-tags">
+                ${players.map((p, i) => `
+                    <div class="player-tag">
+                        <span>${esc(p)}</span>
+                        <span class="remove" onclick="removePlayer(${i})">×</span>
                     </div>
-                    <div class="ranking-players">
-                        ${players.map((p, pi) => `
-                            <div class="ranking-player ${currentRanking.includes(pi) ? 'selected' : ''}" 
-                                 onclick="selectRank(${pi}, ${i})">
-                                <div class="rank">${i + 1}</div>
-                                <div class="name">${p.name}</div>
-                            </div>
-                        `).join('')}
-                    </div>
+                `).join('')}
+            </div>
+            <div class="add-player-row">
+                <input type="text" id="inp-new-player" placeholder="输入姓名，回车添加" onkeypress="if(event.key==='Enter')addPlayer()">
+                <button class="btn btn-primary btn-sm" onclick="addPlayer()">添加</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">💰 金额设置</div>
+            <div class="field">
+                <label>档位金额（第2名付第1档，第3名付第2档...给赢家）</label>
+                <div class="tier-inputs">
+                    ${tiers.map((t, i) => `
+                        <div class="tier-input">
+                            <input type="number" value="${t}" min="0" onchange="updateTier(${i}, this.value)">
+                            <div class="tier-label">第${i + 1}档</div>
+                        </div>
+                    `).join('')}
                 </div>
-            `).join('');
-        }
-        
-        function selectRank(playerIndex, tierIndex) {
-            const existingIndex = currentRanking.indexOf(playerIndex);
-            if (existingIndex !== -1) {
-                currentRanking.splice(existingIndex, 1);
+            </div>
+            <div class="field" style="margin-bottom:0">
+                <label>喜钱金额（有喜者从每人收取的金额）</label>
+                <input type="number" value="${S.config.luckyMoney}" min="0" onchange="updateLuckyMoney(this.value)" style="max-width:120px">
+            </div>
+        </div>
+
+        <button class="btn btn-primary btn-block" onclick="startGame()" ${players.length < 2 ? 'disabled' : ''} style="padding:14px;font-size:16px;">
+            🎮 开始游戏
+        </button>`;
+    }
+
+    function renderPlaying() {
+        const players = S.config.players;
+        const rd = S.currentRoundData;
+        const lane = rd.currentLane;
+        const ranking = rd.lanes[lane];
+
+        const laneTabs = [0, 1, 2].map(i => {
+            const done = rd.lanes[i].length === players.length;
+            const active = i === lane;
+            let cls = 'lane-tab';
+            if (done) cls += ' done';
+            if (active) cls += ' active';
+            return `<div class="${cls}" onclick="switchLane(${i})">第${i + 1}道${done ? ' ✓' : ''}</div>`;
+        }).join('');
+
+        const selectedSet = new Set(ranking);
+        const playerBtns = players.map((p, i) => {
+            const rankPos = ranking.indexOf(i);
+            const isSelected = rankPos !== -1;
+            let cls = 'player-btn';
+            if (isSelected) cls += ' selected';
+            let badge = '';
+            if (isSelected) {
+                const r = rankPos + 1;
+                let rcls = r === 1 ? 'rank-1' : r === 2 ? 'rank-2' : r === 3 ? 'rank-3' : 'rank-other';
+                badge = `<span class="rank-badge ${rcls}">${r}</span>`;
             }
-            currentRanking[playerIndex] = tierIndex;
-            renderRanking();
-        }
-        
-        function resetRound() {
-            currentRanking = [];
-            renderRanking();
-        }
-        
-        function endRound() {
-            // Validate all players have ranking
-            const rankedPlayers = currentRanking.filter(x => x !== undefined).length;
-            if (rankedPlayers < players.length) {
-                alert('请为所有玩家分配排名！');
-                return;
-            }
-            
-            // Calculate round results
-            const tiers = tierMoney.slice(0, players.length - 1);
-            const results = players.map((p, i) => {
-                const rank = currentRanking[i];
-                const money = -tiers[rank] || 0;
-                const luckyAmount = p.lucky.reduce((a, b) => a + b, 0);
-                return {
-                    name: p.name,
-                    money,
-                    lucky: luckyAmount,
-                    total: money - luckyAmount
-                };
-            });
-            
-            // Give money to winners
-            tiers.forEach((tierAmt, rank) => {
-                const winnerIndex = players.findIndex((p, i) => currentRanking[i] === rank);
-                if (winnerIndex !== -1) {
-                    results[winnerIndex].money += tierAmt * (players.length - 1);
-                    results[winnerIndex].total += tierAmt * (players.length - 1);
-                }
-            });
-            
-            // Update totals
-            results.forEach((r, i) => {
-                if (!totalResults[r.name]) totalResults[r.name] = 0;
-                totalResults[r.name] += r.total;
-            });
-            
-            roundResults.push(results);
-            
-            // Show results
-            document.getElementById('resultRound').textContent = round;
-            document.getElementById('resultsSection').style.display = 'block';
-            document.getElementById('summarySection').style.display = 'block';
-            
-            renderResults(results);
-            renderSummary();
-            
-            // Next round
-            round++;
-            currentRanking = [];
-            document.getElementById('currentRound').textContent = round;
-            renderRanking();
-        }
-        
-        function renderResults(results) {
-            const container = document.getElementById('resultsGrid');
-            container.innerHTML = results.map(r => `
-                <div class="result-card ${r.total > 0 ? 'winner' : r.total < 0 ? 'loser' : ''}">
-                    <div class="result-name">${r.name}</div>
-                    <div class="result-money ${r.total > 0 ? 'positive' : r.total < 0 ? 'negative' : ''}">
-                        ${r.total > 0 ? '+' : ''}${r.total}
-                    </div>
-                    ${r.lucky > 0 ? `<div class="lucky-badge">喜钱 -${r.lucky}</div>` : ''}
+            return `<div class="${cls}" onclick="${isSelected ? '' : `selectPlayer(${i})`}">${esc(p)}${badge}</div>`;
+        }).join('');
+
+        const rankDisplay = ranking.length > 0
+            ? '排名：' + ranking.map((pi, ri) => `<span>${ri + 1}.${esc(players[pi])}</span>`).join(' ')
+            : '点击玩家，先点的牌最大';
+
+        const luckyRows = players.map((p, i) => {
+            const cnt = rd.luckyMap[i] || 0;
+            return `
+            <div class="lucky-row">
+                <span class="lucky-name">${esc(p)}</span>
+                <div class="lucky-controls">
+                    <div class="lucky-btn" onclick="removeLucky(${i})" ${cnt === 0 ? 'style="opacity:0.3"' : ''}>−</div>
+                    <span class="lucky-count">${cnt}</span>
+                    <div class="lucky-btn plus" onclick="addLucky(${i})">+</div>
                 </div>
-            `).join('');
+            </div>`;
+        }).join('');
+
+        const canSettle = allLanesDone();
+        const runningTotalHtml = renderRunningTotal();
+        const historyHtml = renderHistory();
+
+        return `
+        <div class="card">
+            <div class="round-header">
+                <div class="round-label">第 ${S.currentRound} 轮</div>
+                <button class="btn btn-danger btn-sm" onclick="endGame()">结束游戏</button>
+            </div>
+
+            <div class="lane-tabs">${laneTabs}</div>
+
+            <div class="player-grid">${playerBtns}</div>
+
+            <div class="lane-ranking">${rankDisplay}</div>
+
+            <div class="lane-actions">
+                <button class="btn btn-secondary btn-sm" onclick="undoLastSelection()" ${ranking.length === 0 ? 'disabled' : ''}>↩ 撤销</button>
+                <button class="btn btn-secondary btn-sm" onclick="resetCurrentLane()" ${ranking.length === 0 ? 'disabled' : ''}>🔄 重置本道</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🎁 喜钱设置 <span style="color:#888;font-size:12px;margin-left:auto;">每喜 ${S.config.luckyMoney}元/人</span></div>
+            <div class="lucky-section">${luckyRows}</div>
+        </div>
+
+        <button class="btn btn-primary btn-block" onclick="settleRound()" ${!canSettle ? 'disabled' : ''} style="padding:14px;font-size:16px;">
+            📊 结算本轮
+        </button>
+
+        ${runningTotalHtml}
+        ${historyHtml}`;
+    }
+
+    function renderRoundResult() {
+        const lastRound = S.rounds[S.rounds.length - 1];
+        const players = S.config.players;
+        const tiers = S.config.tiers;
+
+        let detailRows = '';
+        for (let i = 0; i < players.length; i++) {
+            const laneDetails = [0, 1, 2].map(l => {
+                const v = lastRound.laneScores[l][i];
+                return `${l + 1}道:${fmtMoney(v)}`;
+            }).join(' ');
+
+            const luckyV = lastRound.luckyScores[i] || 0;
+            const luckyStr = luckyV !== 0 ? ` 喜:${fmtMoney(luckyV)}` : '';
+            detailRows += `<div style="font-size:11px;color:#888;">${laneDetails}${luckyStr}</div>`;
         }
-        
-        function renderSummary() {
-            const container = document.getElementById('summaryGrid');
-            const sorted = Object.entries(totalResults).sort((a, b) => b[1] - a[1]);
-            
-            container.innerHTML = sorted.map(([name, total]) => `
-                <div class="summary-card">
-                    <div class="name">${name}</div>
-                    <div class="total ${total > 0 ? 'win' : total < 0 ? 'lose' : ''}">
-                        ${total > 0 ? '+' : ''}${total}
-                    </div>
-                </div>
-            `).join('');
+
+        const resultCards = players.map((p, i) => {
+            const v = lastRound.results[i];
+            const cls = v > 0 ? 'positive' : v < 0 ? 'negative' : 'zero';
+            const cardCls = v > 0 ? 'win' : v < 0 ? 'lose' : '';
+            const luckyCount = lastRound.luckyMap[i] || 0;
+
+            const ld = [0, 1, 2].map(l => `${l + 1}道:${fmtMoney(lastRound.laneScores[l][i])}`).join(' ');
+            const luckyV = lastRound.luckyScores[i] || 0;
+            const ls = luckyV !== 0 ? `<br>喜钱:${fmtMoney(luckyV)}` : '';
+
+            return `
+            <div class="result-card ${cardCls}">
+                <div class="result-name">${esc(p)}</div>
+                <div class="result-money ${cls}">${fmtMoney(v)}</div>
+                <div class="result-detail">${ld}${ls}</div>
+                ${luckyCount > 0 ? `<div class="lucky-badge">🎉 ${luckyCount}喜</div>` : ''}
+            </div>`;
+        }).join('');
+
+        const zs = validateZeroSum(lastRound.results);
+        const zsHtml = `<div class="zero-sum ${zs ? 'ok' : 'err'}">${zs ? '✓ 零和校验通过' : '⚠ 零和校验失败'}</div>`;
+
+        const runningTotalHtml = renderRunningTotal();
+        const historyHtml = renderHistory();
+
+        return `
+        <div class="card">
+            <div class="card-title">📊 第 ${S.rounds.length} 轮结算</div>
+            <div class="result-grid">${resultCards}</div>
+            ${zsHtml}
+        </div>
+
+        <div class="confirm-bar">
+            <button class="btn btn-primary" onclick="nextRound()" style="flex:2">▶ 下一轮</button>
+            <button class="btn btn-danger" onclick="endGame()">结束游戏</button>
+        </div>
+
+        ${runningTotalHtml}
+        ${historyHtml}`;
+    }
+
+    function renderRunningTotal() {
+        if (S.rounds.length === 0) return '';
+        const players = S.config.players;
+        const sorted = players.map((p, i) => ({ name: p, total: S.totals[i] || 0 }))
+            .sort((a, b) => b.total - a.total);
+
+        const cards = sorted.map(s => {
+            const cls = s.total > 0 ? 'win' : s.total < 0 ? 'lose' : 'zero';
+            return `
+            <div class="final-card">
+                <div class="name">${esc(s.name)}</div>
+                <div class="total ${cls}">${fmtMoney(s.total)}</div>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="card" style="margin-top:16px;">
+            <div class="card-title">🏆 累计总分</div>
+            <div class="final-grid">${cards}</div>
+        </div>`;
+    }
+
+    function renderHistory() {
+        if (S.rounds.length === 0) return '';
+        const players = S.config.players;
+
+        const items = S.rounds.map((r, ri) => {
+            const rows = players.map((p, i) => {
+                const v = r.results[i];
+                const cls = v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+                return `<div class="history-row"><span class="name">${esc(p)}</span><span class="amount ${cls}">${fmtMoney(v)}</span></div>`;
+            }).join('');
+            return `<div class="history-item"><div class="history-item-title">第 ${ri + 1} 轮</div>${rows}</div>`;
+        }).join('');
+
+        return `
+        <div class="card" style="margin-top:16px;">
+            <div class="card-title history-toggle" onclick="toggleHistory()">
+                📜 历史记录 (${S.rounds.length}轮)
+                <span class="arrow ${historyOpen ? 'open' : ''}">▼</span>
+            </div>
+            <div class="${historyOpen ? '' : 'hidden'}" id="history-content">${items}</div>
+        </div>`;
+    }
+
+    function toggleHistory() {
+        historyOpen = !historyOpen;
+        render();
+    }
+
+    function renderFinished() {
+        const players = S.config.players;
+        const sorted = players.map((p, i) => ({ name: p, total: S.totals[i] || 0 }))
+            .sort((a, b) => b.total - a.total);
+
+        const cards = sorted.map((s, i) => {
+            const cls = s.total > 0 ? 'win' : s.total < 0 ? 'lose' : 'zero';
+            const medal = i === 0 && s.total > 0 ? '🥇 ' : '';
+            return `
+            <div class="final-card">
+                <div class="name">${medal}${esc(s.name)}</div>
+                <div class="total ${cls}">${fmtMoney(s.total)}</div>
+            </div>`;
+        }).join('');
+
+        const sum = Object.values(S.totals).reduce((a, b) => a + b, 0);
+        const zsOk = sum === 0;
+        const zsHtml = `<div class="zero-sum ${zsOk ? 'ok' : 'err'}">${zsOk ? '✓ 零和校验通过' : '⚠ 零和校验异常 (差额:' + sum + ')'}</div>`;
+
+        const historyHtml = renderHistory();
+
+        return `
+        <div class="card final-section">
+            <div class="card-title" style="justify-content:center;font-size:18px;">🏆 最终结算 · 共 ${S.rounds.length} 轮</div>
+            <div class="final-grid">${cards}</div>
+            ${zsHtml}
+        </div>
+
+        ${historyHtml}
+
+        <button class="btn btn-primary btn-block" onclick="newGame()" style="margin-top:16px;padding:14px;font-size:16px;">
+            🔄 新游戏
+        </button>`;
+    }
+
+    // ====== Helpers ======
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function fmtMoney(v) {
+        if (v > 0) return '+' + v;
+        if (v < 0) return '' + v;
+        return '0';
+    }
+
+    // ====== Init ======
+    (function init() {
+        const saved = loadState();
+        if (saved && saved.phase && saved.phase !== 'setup') {
+            S = saved;
+            if (!S.currentRoundData) resetRoundData();
+            if (!S.totals) S.totals = {};
+            render();
+            return;
         }
-        
-        function updateTotalResults() {
-            totalResults = {};
-            roundResults.flat().forEach(r => {
-                totalResults[r.name] = (totalResults[r.name] || 0) + r.total;
-            });
-            renderSummary();
+        if (saved && saved.config) {
+            S.config = saved.config;
         }
-        
-        function newGame() {
-            if (confirm('确定开始新游戏？当前数据将清除！')) {
-                round = 0;
-                roundResults = [];
-                totalResults = {};
-                players.forEach(p => p.lucky = []);
-                currentRanking = [];
-                document.getElementById('gameSection').style.display = 'none';
-                document.getElementById('resultsSection').style.display = 'none';
-                document.getElementById('summarySection').style.display = 'none';
-            }
-        }
+        render();
+    })();
     </script>
 </body>
 </html>
