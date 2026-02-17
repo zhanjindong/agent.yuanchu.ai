@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>疯狂僵尸</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111;
+      color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+    canvas { border: 2px solid #333; cursor: crosshair; display: block; }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+// ============================================================
+// 常量与配置
+// ============================================================
+const CONFIG = {
+  WIDTH: 1024,
+  HEIGHT: 600,
+  GRAVITY: 0.5,
+  GROUND_Y: 560,
+
+  PLAYER: {
+    WIDTH: 30, HEIGHT: 46,
+    SPEED: 4,
+    JUMP_FORCE: -11,
+    MAX_HP: 3,
+    INVINCIBLE_TIME: 1000,
+  },
+
+  WEAPON_LEVELS: [
+    { level: 1, fireRate: 500,  damage: 1, bulletSpeed: 8,  bulletSize: 4 },
+    { level: 2, fireRate: 350,  damage: 1, bulletSpeed: 9,  bulletSize: 4 },
+    { level: 3, fireRate: 300,  damage: 2, bulletSpeed: 10, bulletSize: 5 },
+    { level: 4, fireRate: 250,  damage: 2, bulletSpeed: 11, bulletSize: 5 },
+    { level: 5, fireRate: 200,  damage: 3, bulletSpeed: 12, bulletSize: 6 },
+    { level: 6, fireRate: 150,  damage: 3, bulletSpeed: 14, bulletSize: 7 },
+  ],
+
+  ZOMBIE: {
+    NORMAL:  { width: 28, height: 42, speed: 1.2, hp: 1, shieldHp: 0, damage: 1, color: '#5a8f3c', attackRange: 28, attackCooldown: 1000 },
+    SHIELD:  { width: 32, height: 46, speed: 1.0, hp: 1, shieldHp: 2, damage: 1, color: '#4a7a9b', attackRange: 28, attackCooldown: 1000 },
+    GIANT:   { width: 52, height: 78, speed: 0.6, hp: 6, shieldHp: 0, damage: 3, color: '#8b3a3a', attackRange: 50, attackCooldown: 1500 },
+  },
+
+  WAVES: [
+    { total: [5,8],   ratio: { normal: 1.0,  shield: 0,    giant: 0    } },
+    { total: [8,12],  ratio: { normal: 0.7,  shield: 0.3,  giant: 0    } },
+    { total: [12,16], ratio: { normal: 0.5,  shield: 0.35, giant: 0.15 } },
+    { total: [16,20], ratio: { normal: 0.35, shield: 0.4,  giant: 0.25 } },
+    { total: [20,25], ratio: { normal: 0.25, shield: 0.4,  giant: 0.35 } },
+    { total: [25,30], ratio: { normal: 0.2,  shield: 0.35, giant: 0.45 } },
+  ],
+  WAVE_DURATION: 60000,
+  WAVE_INTERVAL: 4000,
+
+  PLATFORMS: [
+    { x: 120,  y: 430, width: 130, height: 18 },
+    { x: 420,  y: 350, width: 150, height: 18 },
+    { x: 750,  y: 430, width: 130, height: 18 },
+    { x: 260,  y: 460, width: 110, height: 18 },
+    { x: 620,  y: 460, width: 110, height: 18 },
+  ],
+};
+
+// ============================================================
+// 工具函数
+// ============================================================
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function rectOverlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+function dist(x1, y1, x2, y2) {
+  return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
+}
+
+// ============================================================
+// 输入管理器
+// ============================================================
+class InputManager {
+  constructor(canvas) {
+    this.keys = {};
+    this.mouseX = CONFIG.WIDTH / 2;
+    this.mouseY = CONFIG.HEIGHT / 2;
+    this.mouseDown = false;
+    this.canvas = canvas;
+
+    window.addEventListener('keydown', e => {
+      this.keys[e.key.toLowerCase()] = true;
+      if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase()) || e.key === ' ') {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', e => { this.keys[e.key.toLowerCase()] = false; });
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      this.mouseX = (e.clientX - rect.left) * (CONFIG.WIDTH / rect.width);
+      this.mouseY = (e.clientY - rect.top) * (CONFIG.HEIGHT / rect.height);
+    });
+    canvas.addEventListener('mousedown', e => { if (e.button === 0) this.mouseDown = true; });
+    canvas.addEventListener('mouseup', e => { if (e.button === 0) this.mouseDown = false; });
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  get left()  { return this.keys['a'] || this.keys['arrowleft']; }
+  get right() { return this.keys['d'] || this.keys['arrowright']; }
+  get jump()  { return this.keys['w'] || this.keys['arrowup'] || this.keys[' ']; }
+  get shoot() { return this.mouseDown || this.keys['j']; }
+}
+
+// ============================================================
+// 粒子系统
+// ============================================================
+class Particle {
+  constructor(x, y, vx, vy, color, life, size) {
+    this.x = x; this.y = y;
+    this.vx = vx; this.vy = vy;
+    this.color = color;
+    this.life = life;
+    this.maxLife = life;
+    this.size = size;
+    this.active = true;
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vy += 0.3 * dt;
+    this.life -= dt * 16.67;
+    if (this.life <= 0) this.active = false;
+  }
+  draw(ctx) {
+    const alpha = clamp(this.life / this.maxLife, 0, 1);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+    ctx.globalAlpha = 1;
+  }
+}
+
+class ParticleSystem {
+  constructor() { this.particles = []; }
+
+  emit(x, y, color, count, speedRange, sizeRange, lifeRange) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = speedRange[0] + Math.random() * (speedRange[1] - speedRange[0]);
+      const size = sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]);
+      const life = lifeRange[0] + Math.random() * (lifeRange[1] - lifeRange[0]);
+      this.particles.push(new Particle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, color, life, size));
+    }
+  }
+
+  emitMuzzleFlash(x, y) {
+    this.emit(x, y, '#ffdd44', 5, [1, 3], [2, 4], [100, 200]);
+    this.emit(x, y, '#ff8800', 3, [0.5, 2], [3, 5], [80, 150]);
+  }
+
+  emitZombieDeath(x, y, color) {
+    this.emit(x, y, color, 15, [1, 4], [3, 6], [300, 600]);
+    this.emit(x, y, '#440000', 8, [0.5, 3], [2, 4], [200, 400]);
+  }
+
+  emitShieldBreak(x, y) {
+    this.emit(x, y, '#66bbff', 20, [2, 5], [3, 6], [300, 600]);
+    this.emit(x, y, '#aaddff', 10, [1, 3], [2, 4], [200, 400]);
+  }
+
+  emitHit(x, y) {
+    this.emit(x, y, '#ff4444', 6, [1, 3], [2, 4], [150, 300]);
+  }
+
+  update(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      this.particles[i].update(dt);
+      if (!this.particles[i].active) this.particles.splice(i, 1);
+    }
+  }
+  draw(ctx) {
+    for (const p of this.particles) p.draw(ctx);
+  }
+}
+
+// ============================================================
+// 子弹类
+// ============================================================
+class Bullet {
+  constructor(x, y, dirX, dirY, damage, speed, size) {
+    this.x = x; this.y = y;
+    const len = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+    this.vx = (dirX / len) * speed;
+    this.vy = (dirY / len) * speed;
+    this.damage = damage;
+    this.speed = speed;
+    this.size = size;
+    this.active = true;
+    this.trail = [];
+  }
+  update() {
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > 5) this.trail.shift();
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.x < -20 || this.x > CONFIG.WIDTH + 20 || this.y < -20 || this.y > CONFIG.HEIGHT + 20) {
+      this.active = false;
+    }
+  }
+  draw(ctx) {
+    // 尾迹
+    for (let i = 0; i < this.trail.length; i++) {
+      const alpha = (i + 1) / this.trail.length * 0.4;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#ffaa00';
+      const s = this.size * (i + 1) / this.trail.length;
+      ctx.beginPath();
+      ctx.arc(this.trail[i].x, this.trail[i].y, s * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // 子弹本体
+    ctx.fillStyle = '#ffdd00';
+    ctx.shadowColor = '#ffaa00';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  getRect() {
+    return { x: this.x - this.size, y: this.y - this.size, w: this.size * 2, h: this.size * 2 };
+  }
+}
+
+// ============================================================
+// 玩家类
+// ============================================================
+class Player {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.vx = 0; this.vy = 0;
+    this.width = CONFIG.PLAYER.WIDTH;
+    this.height = CONFIG.PLAYER.HEIGHT;
+    this.hp = CONFIG.PLAYER.MAX_HP;
+    this.weaponLevel = 0;
+    this.invincibleUntil = 0;
+    this.lastFireTime = 0;
+    this.facingRight = true;
+    this.onGround = false;
+    this.hurtFlash = 0;
+    this.walkFrame = 0;
+    this.walkTimer = 0;
+  }
+
+  update(dt, input, platforms, now) {
+    // 水平移动
+    this.vx = 0;
+    if (input.left) { this.vx = -CONFIG.PLAYER.SPEED; this.facingRight = false; }
+    if (input.right) { this.vx = CONFIG.PLAYER.SPEED; this.facingRight = true; }
+
+    // 跳跃
+    if (input.jump && this.onGround) {
+      this.vy = CONFIG.PLAYER.JUMP_FORCE;
+      this.onGround = false;
+    }
+
+    // 重力
+    this.vy += CONFIG.GRAVITY;
+    if (this.vy > 15) this.vy = 15;
+
+    // 水平移动
+    this.x += this.vx;
+    this.x = clamp(this.x, 0, CONFIG.WIDTH - this.width);
+
+    // 垂直移动
+    this.y += this.vy;
+    this.onGround = false;
+
+    // 地面碰撞
+    if (this.y + this.height >= CONFIG.GROUND_Y) {
+      this.y = CONFIG.GROUND_Y - this.height;
+      this.vy = 0;
+      this.onGround = true;
+    }
+
+    // 平台碰撞（仅从上方落下时）
+    if (this.vy >= 0) {
+      for (const p of platforms) {
+        const feetY = this.y + this.height;
+        const prevFeetY = feetY - this.vy;
+        if (this.x + this.width > p.x && this.x < p.x + p.width) {
+          if (prevFeetY <= p.y + 2 && feetY >= p.y) {
+            this.y = p.y - this.height;
+            this.vy = 0;
+            this.onGround = true;
+          }
+        }
+      }
+    }
+
+    // 行走动画
+    if (Math.abs(this.vx) > 0 && this.onGround) {
+      this.walkTimer += dt * 16.67;
+      if (this.walkTimer > 150) { this.walkTimer = 0; this.walkFrame = (this.walkFrame + 1) % 4; }
+    } else {
+      this.walkFrame = 0;
+      this.walkTimer = 0;
+    }
+
+    // 受伤闪烁递减
+    if (this.hurtFlash > 0) this.hurtFlash -= dt * 16.67;
+  }
+
+  takeDamage(amount, now) {
+    if (now < this.invincibleUntil) return false;
+    this.hp -= amount;
+    this.invincibleUntil = now + CONFIG.PLAYER.INVINCIBLE_TIME;
+    this.hurtFlash = CONFIG.PLAYER.INVINCIBLE_TIME;
+    if (this.hp <= 0) this.hp = 0;
+    return true;
+  }
+
+  tryShoot(input, now) {
+    const weapon = CONFIG.WEAPON_LEVELS[this.weaponLevel];
+    if (!input.shoot) return null;
+    if (now - this.lastFireTime < weapon.fireRate) return null;
+    this.lastFireTime = now;
+
+    const cx = this.x + this.width / 2;
+    const cy = this.y + this.height / 3;
+
+    let dirX, dirY;
+    if (input.mouseDown) {
+      dirX = input.mouseX - cx;
+      dirY = input.mouseY - cy;
+    } else {
+      dirX = this.facingRight ? 1 : -1;
+      dirY = 0;
+    }
+
+    return new Bullet(cx, cy, dirX, dirY, weapon.damage, weapon.bulletSpeed, weapon.bulletSize);
+  }
+
+  getRect() {
+    return { x: this.x, y: this.y, w: this.width, h: this.height };
+  }
+
+  draw(ctx, now) {
+    ctx.save();
+    // 受伤闪烁
+    if (this.hurtFlash > 0 && Math.floor(this.hurtFlash / 80) % 2 === 0) {
+      ctx.globalAlpha = 0.4;
+    }
+
+    const cx = this.x + this.width / 2;
+    const feetY = this.y + this.height;
+    const dir = this.facingRight ? 1 : -1;
+    const legOffset = this.onGround ? Math.sin(this.walkFrame * Math.PI / 2) * 4 : 0;
+
+    // 身体
+    ctx.fillStyle = '#3366cc';
+    ctx.fillRect(this.x + 4, this.y + 14, this.width - 8, this.height - 26);
+
+    // 头
+    ctx.fillStyle = '#ffcc88';
+    ctx.beginPath();
+    ctx.arc(cx, this.y + 10, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 眼睛
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(cx + dir * 4, this.y + 9, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 腿
+    ctx.strokeStyle = '#2244aa';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, feetY - 12);
+    ctx.lineTo(cx - 4 - legOffset, feetY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + 4, feetY - 12);
+    ctx.lineTo(cx + 4 + legOffset, feetY);
+    ctx.stroke();
+
+    // 手臂 + 枪
+    const armX = cx + dir * 8;
+    const armY = this.y + 22;
+    ctx.strokeStyle = '#ffcc88';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, this.y + 20);
+    ctx.lineTo(armX, armY);
+    ctx.stroke();
+
+    // 枪
+    ctx.fillStyle = '#555';
+    ctx.fillRect(armX, armY - 2, dir * 14, 4);
+    // 枪口
+    ctx.fillStyle = '#888';
+    ctx.fillRect(armX + dir * 12, armY - 3, dir * 4, 6);
+
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// 僵尸类
+// ============================================================
+class Zombie {
+  constructor(x, y, type, cfg) {
+    this.x = x; this.y = y;
+    this.type = type;
+    this.width = cfg.width; this.height = cfg.height;
+    this.speed = cfg.speed;
+    this.hp = cfg.hp;
+    this.maxHp = cfg.hp;
+    this.shieldHp = cfg.shieldHp;
+    this.maxShieldHp = cfg.shieldHp;
+    this.damage = cfg.damage;
+    this.color = cfg.color;
+    this.attackRange = cfg.attackRange;
+    this.attackCooldown = cfg.attackCooldown;
+    this.active = true;
+    this.lastAttackTime = 0;
+    this.hitFlash = 0;
+    this.facingRight = true;
+    this.walkFrame = 0;
+    this.walkTimer = 0;
+    this.deathTimer = 0;
+    this.dying = false;
+  }
+
+  update(dt, playerX, playerY, platforms) {
+    if (this.dying) {
+      this.deathTimer -= dt * 16.67;
+      if (this.deathTimer <= 0) this.active = false;
+      return;
+    }
+
+    // 朝玩家移动
+    const dir = playerX > this.x + this.width / 2 ? 1 : -1;
+    this.facingRight = dir > 0;
+
+    let newX = this.x + dir * this.speed;
+
+    // 碰平台侧面阻挡
+    let blocked = false;
+    for (const p of platforms) {
+      const zombieBottom = this.y + this.height;
+      if (zombieBottom > p.y && this.y < p.y + p.height) {
+        if (dir > 0 && this.x + this.width <= p.x && newX + this.width > p.x) {
+          newX = p.x - this.width;
+          blocked = true;
+        }
+        if (dir < 0 && this.x >= p.x + p.width && newX < p.x + p.width) {
+          newX = p.x + p.width;
+          blocked = true;
+        }
+      }
+    }
+
+    this.x = clamp(newX, 0, CONFIG.WIDTH - this.width);
+
+    // 确保在地面
+    this.y = CONFIG.GROUND_Y - this.height;
+
+    // 行走动画
+    this.walkTimer += dt * 16.67;
+    if (this.walkTimer > 200) { this.walkTimer = 0; this.walkFrame = (this.walkFrame + 1) % 4; }
+
+    if (this.hitFlash > 0) this.hitFlash -= dt * 16.67;
+  }
+
+  takeDamage(damage, particles) {
+    if (this.dying) return false;
+
+    let remaining = damage;
+    // 先扣护盾
+    if (this.shieldHp > 0) {
+      const shieldDmg = Math.min(remaining, this.shieldHp);
+      this.shieldHp -= shieldDmg;
+      remaining -= shieldDmg;
+      if (this.shieldHp <= 0 && this.maxShieldHp > 0) {
+        particles.emitShieldBreak(this.x + this.width / 2, this.y + this.height / 2);
+      }
+    }
+    // 剩余扣hp
+    if (remaining > 0) {
+      this.hp -= remaining;
+    }
+
+    this.hitFlash = 150;
+    particles.emitHit(this.x + this.width / 2, this.y + this.height / 3);
+
+    if (this.hp <= 0) {
+      this.dying = true;
+      this.deathTimer = 300;
+      particles.emitZombieDeath(this.x + this.width / 2, this.y + this.height / 2, this.color);
+      return true; // killed
+    }
+    return false;
+  }
+
+  canAttackPlayer(player, now) {
+    if (this.dying) return false;
+    if (now - this.lastAttackTime < this.attackCooldown) return false;
+
+    // 玩家站在平台上 => 僵尸无法攻击（僵尸不能跳上平台）
+    // 判定：如果玩家脚底在僵尸头顶之上，则视为安全
+    const playerBottom = player.y + player.height;
+    const zombieTop = this.y;
+    if (playerBottom <= zombieTop) return false;
+
+    // 水平距离检测
+    const px = player.x + player.width / 2;
+    const zx = this.x + this.width / 2;
+    const horizontalDist = Math.abs(px - zx);
+
+    return horizontalDist < this.attackRange + player.width / 2;
+  }
+
+  getRect() {
+    return { x: this.x, y: this.y, w: this.width, h: this.height };
+  }
+
+  draw(ctx) {
+    ctx.save();
+    if (this.dying) {
+      ctx.globalAlpha = clamp(this.deathTimer / 300, 0, 1);
+    }
+    if (this.hitFlash > 0) {
+      ctx.globalAlpha = 0.6;
+    }
+
+    const cx = this.x + this.width / 2;
+    const feetY = this.y + this.height;
+    const dir = this.facingRight ? 1 : -1;
+    const legOffset = Math.sin(this.walkFrame * Math.PI / 2) * 3;
+
+    if (this.type === 'GIANT') {
+      this._drawGiant(ctx, cx, feetY, dir, legOffset);
+    } else if (this.type === 'SHIELD') {
+      this._drawShield(ctx, cx, feetY, dir, legOffset);
+    } else {
+      this._drawNormal(ctx, cx, feetY, dir, legOffset);
+    }
+
+    // 血条（巨人）
+    if (this.type === 'GIANT' && !this.dying) {
+      const barW = this.width;
+      const barH = 4;
+      const barX = this.x;
+      const barY = this.y - 8;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.fillStyle = '#cc2222';
+      ctx.fillRect(barX, barY, barW * (this.hp / this.maxHp), barH);
+    }
+
+    ctx.restore();
+  }
+
+  _drawNormal(ctx, cx, feetY, dir, legOff) {
+    // 身体
+    ctx.fillStyle = this.hitFlash > 0 ? '#fff' : this.color;
+    ctx.fillRect(this.x + 3, this.y + 12, this.width - 6, this.height - 22);
+
+    // 头
+    ctx.fillStyle = this.hitFlash > 0 ? '#fdd' : '#7ab55c';
+    ctx.beginPath();
+    ctx.arc(cx, this.y + 9, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 眼睛（红色）
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath();
+    ctx.arc(cx + dir * 3, this.y + 7, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 嘴
+    ctx.strokeStyle = '#330000';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx + dir * 2, this.y + 14, 3, 0, Math.PI);
+    ctx.stroke();
+
+    // 腿
+    ctx.strokeStyle = '#4a7030';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx - 3, feetY - 10); ctx.lineTo(cx - 3 - legOff, feetY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 3, feetY - 10); ctx.lineTo(cx + 3 + legOff, feetY); ctx.stroke();
+
+    // 手臂
+    ctx.strokeStyle = '#7ab55c';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx, this.y + 18); ctx.lineTo(cx + dir * 12, this.y + 30); ctx.stroke();
+  }
+
+  _drawShield(ctx, cx, feetY, dir, legOff) {
+    // 身体
+    ctx.fillStyle = this.hitFlash > 0 ? '#fff' : this.color;
+    ctx.fillRect(this.x + 4, this.y + 13, this.width - 8, this.height - 24);
+
+    // 头
+    ctx.fillStyle = this.hitFlash > 0 ? '#ddf' : '#6b9bb5';
+    ctx.beginPath();
+    ctx.arc(cx, this.y + 10, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 眼睛
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath();
+    ctx.arc(cx + dir * 3, this.y + 8, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 腿
+    ctx.strokeStyle = '#3a6a80';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx - 4, feetY - 10); ctx.lineTo(cx - 4 - legOff, feetY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 4, feetY - 10); ctx.lineTo(cx + 4 + legOff, feetY); ctx.stroke();
+
+    // 护盾
+    if (this.shieldHp > 0) {
+      const shieldX = cx - dir * 10;
+      const shieldAlpha = this.shieldHp / this.maxShieldHp;
+      ctx.globalAlpha = 0.4 + shieldAlpha * 0.5;
+      ctx.fillStyle = '#66bbff';
+      ctx.strokeStyle = '#aaddff';
+      ctx.lineWidth = 2;
+      // 盾牌形状
+      ctx.beginPath();
+      ctx.ellipse(shieldX, this.y + this.height / 2, 8, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 护盾裂纹
+      if (this.shieldHp < this.maxShieldHp) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(shieldX - 3, this.y + this.height / 2 - 8);
+        ctx.lineTo(shieldX + 2, this.y + this.height / 2);
+        ctx.lineTo(shieldX - 2, this.y + this.height / 2 + 8);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // 手臂
+    ctx.strokeStyle = '#6b9bb5';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx, this.y + 20); ctx.lineTo(cx + dir * 12, this.y + 32); ctx.stroke();
+  }
+
+  _drawGiant(ctx, cx, feetY, dir, legOff) {
+    // 身体（大）
+    ctx.fillStyle = this.hitFlash > 0 ? '#fff' : this.color;
+    ctx.fillRect(this.x + 6, this.y + 20, this.width - 12, this.height - 32);
+
+    // 头
+    ctx.fillStyle = this.hitFlash > 0 ? '#fdd' : '#a55050';
+    ctx.beginPath();
+    ctx.arc(cx, this.y + 15, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 眼睛
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath();
+    ctx.arc(cx - 4, this.y + 12, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + 4, this.y + 12, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 嘴（大口）
+    ctx.fillStyle = '#330000';
+    ctx.beginPath();
+    ctx.arc(cx, this.y + 22, 5, 0, Math.PI);
+    ctx.fill();
+
+    // 腿（粗）
+    ctx.strokeStyle = '#6a2a2a';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(cx - 8, feetY - 16); ctx.lineTo(cx - 8 - legOff * 1.5, feetY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 8, feetY - 16); ctx.lineTo(cx + 8 + legOff * 1.5, feetY); ctx.stroke();
+
+    // 手臂+棍子
+    const armEndX = cx + dir * 22;
+    const armEndY = this.y + 45;
+    ctx.strokeStyle = '#a55050';
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(cx + dir * 4, this.y + 28); ctx.lineTo(armEndX, armEndY); ctx.stroke();
+
+    // 棍子
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(armEndX, armEndY);
+    ctx.lineTo(armEndX + dir * 16, armEndY + 18);
+    ctx.stroke();
+    // 棍子顶端
+    ctx.fillStyle = '#654321';
+    ctx.beginPath();
+    ctx.arc(armEndX + dir * 16, armEndY + 18, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ============================================================
+// 波次管理器
+// ============================================================
+class WaveManager {
+  constructor() {
+    this.currentWave = 0;
+    this.waveTimer = 0;
+    this.spawnTimer = 0;
+    this.spawnQueue = [];
+    this.state = 'waiting'; // waiting | active | intermission | completed
+    this.intermissionTimer = 0;
+    this.allSpawned = false;
+    this.totalToSpawn = 0;
+    this.spawnInterval = 2000;
+    this.totalSpawned = 0;
+  }
+
+  startWave(waveIndex) {
+    this.currentWave = waveIndex;
+    const waveCfg = CONFIG.WAVES[waveIndex];
+    const total = rand(waveCfg.total[0], waveCfg.total[1]);
+
+    // 按比例分配僵尸类型
+    const normalCount = Math.round(total * waveCfg.ratio.normal);
+    const shieldCount = Math.round(total * waveCfg.ratio.shield);
+    const giantCount = Math.max(0, total - normalCount - shieldCount);
+
+    this.spawnQueue = [];
+    for (let i = 0; i < normalCount; i++) this.spawnQueue.push('NORMAL');
+    for (let i = 0; i < shieldCount; i++) this.spawnQueue.push('SHIELD');
+    for (let i = 0; i < giantCount; i++) this.spawnQueue.push('GIANT');
+
+    // 打乱顺序
+    for (let i = this.spawnQueue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.spawnQueue[i], this.spawnQueue[j]] = [this.spawnQueue[j], this.spawnQueue[i]];
+    }
+
+    this.totalToSpawn = this.spawnQueue.length;
+    this.totalSpawned = 0;
+    // 均匀分布在前85%时间内生成
+    this.spawnInterval = Math.max(800, (CONFIG.WAVE_DURATION * 0.85) / this.totalToSpawn);
+    this.waveTimer = 0;
+    this.spawnTimer = this.spawnInterval; // 立即生成第一只
+    this.allSpawned = false;
+    this.state = 'active';
+  }
+
+  update(dt, zombies) {
+    if (this.state === 'waiting') return null;
+
+    if (this.state === 'intermission') {
+      this.intermissionTimer -= dt * 16.67;
+      if (this.intermissionTimer <= 0) {
+        if (this.currentWave + 1 >= CONFIG.WAVES.length) {
+          this.state = 'completed';
+          return 'victory';
+        }
+        this.startWave(this.currentWave + 1);
+        return 'wave_start';
+      }
+      return null;
+    }
+
+    if (this.state !== 'active') return null;
+
+    this.waveTimer += dt * 16.67;
+    this.spawnTimer += dt * 16.67;
+
+    // 生成僵尸
+    let spawned = null;
+    if (this.spawnQueue.length > 0 && this.spawnTimer >= this.spawnInterval) {
+      this.spawnTimer = 0;
+      const type = this.spawnQueue.shift();
+      this.totalSpawned++;
+      spawned = type;
+    }
+
+    if (this.spawnQueue.length === 0) this.allSpawned = true;
+
+    // 波次结束条件：所有僵尸已生成 且 场上无存活僵尸
+    if (this.allSpawned) {
+      const anyAlive = zombies.some(z => z.active && !z.dying);
+      if (!anyAlive && this.totalSpawned > 0) {
+        return this._endWave();
+      }
+    }
+
+    // 时间到
+    if (this.waveTimer >= CONFIG.WAVE_DURATION) {
+      return this._endWave();
+    }
+
+    return spawned;
+  }
+
+  _endWave() {
+    this.state = 'intermission';
+    this.intermissionTimer = CONFIG.WAVE_INTERVAL;
+    return 'wave_clear';
+  }
+
+  getTimeLeft() {
+    return Math.max(0, Math.ceil((CONFIG.WAVE_DURATION - this.waveTimer) / 1000));
+  }
+}
+
+// ============================================================
+// 游戏主类
+// ============================================================
+class Game {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    canvas.width = CONFIG.WIDTH;
+    canvas.height = CONFIG.HEIGHT;
+
+    this.input = new InputManager(canvas);
+    this.state = 'menu'; // menu | playing | gameover | victory
+    this.player = null;
+    this.bullets = [];
+    this.zombies = [];
+    this.waveManager = new WaveManager();
+    this.particles = new ParticleSystem();
+    this.kills = 0;
+    this.lastTime = 0;
+    this.levelUpText = 0;
+    this.shakeTimer = 0;
+    this.shakeIntensity = 0;
+
+    // 开始菜单的点击事件
+    canvas.addEventListener('click', (e) => {
+      if (this.state === 'menu') {
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * (CONFIG.WIDTH / rect.width);
+        const my = (e.clientY - rect.top) * (CONFIG.HEIGHT / rect.height);
+        // 开始按钮区域
+        if (mx > CONFIG.WIDTH / 2 - 100 && mx < CONFIG.WIDTH / 2 + 100 &&
+            my > 340 && my < 390) {
+          this.startGame();
+        }
+      } else if (this.state === 'gameover' || this.state === 'victory') {
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * (CONFIG.WIDTH / rect.width);
+        const my = (e.clientY - rect.top) * (CONFIG.HEIGHT / rect.height);
+        if (mx > CONFIG.WIDTH / 2 - 100 && mx < CONFIG.WIDTH / 2 + 100 &&
+            my > 380 && my < 430) {
+          this.startGame();
+        }
+      }
+    });
+
+    this.run();
+  }
+
+  startGame() {
+    this.state = 'playing';
+    this.player = new Player(CONFIG.WIDTH / 2 - 15, CONFIG.GROUND_Y - CONFIG.PLAYER.HEIGHT);
+    this.bullets = [];
+    this.zombies = [];
+    this.kills = 0;
+    this.particles = new ParticleSystem();
+    this.levelUpText = 0;
+    this.waveManager = new WaveManager();
+    this.waveManager.startWave(0);
+  }
+
+  run(timestamp = 0) {
+    const dt = Math.min((timestamp - this.lastTime) / 16.67, 3); // 归一化到 ~60fps, 最大3帧补偿
+    this.lastTime = timestamp;
+
+    this.update(dt, timestamp);
+    this.draw(timestamp);
+
+    requestAnimationFrame(t => this.run(t));
+  }
+
+  update(dt, now) {
+    if (this.state !== 'playing') return;
+
+    // 更新玩家
+    this.player.update(dt, this.input, CONFIG.PLATFORMS, now);
+
+    // 射击
+    const bullet = this.player.tryShoot(this.input, now);
+    if (bullet) {
+      this.bullets.push(bullet);
+      this.particles.emitMuzzleFlash(bullet.x, bullet.y);
+    }
+
+    // 更新子弹
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      this.bullets[i].update();
+      if (!this.bullets[i].active) this.bullets.splice(i, 1);
+    }
+
+    // 更新僵尸
+    for (let i = this.zombies.length - 1; i >= 0; i--) {
+      const z = this.zombies[i];
+      z.update(dt, this.player.x + this.player.width / 2, this.player.y, CONFIG.PLATFORMS);
+      if (!z.active) {
+        this.zombies.splice(i, 1);
+        continue;
+      }
+
+      // 僵尸攻击玩家
+      if (z.canAttackPlayer(this.player, now)) {
+        const hit = this.player.takeDamage(z.damage, now);
+        if (hit) {
+          z.lastAttackTime = now;
+          this.shakeTimer = 200;
+          this.shakeIntensity = z.damage >= 3 ? 12 : 5;
+          if (this.player.hp <= 0) {
+            this.state = 'gameover';
+            return;
+          }
+        }
+      }
+    }
+
+    // 子弹碰撞僵尸
+    for (let bi = this.bullets.length - 1; bi >= 0; bi--) {
+      const b = this.bullets[bi];
+      if (!b.active) continue;
+      for (const z of this.zombies) {
+        if (z.dying || !z.active) continue;
+        if (rectOverlap(b.getRect(), z.getRect())) {
+          b.active = false;
+          const killed = z.takeDamage(b.damage, this.particles);
+          if (killed) this.kills++;
+          break;
+        }
+      }
+    }
+    // 清理失效子弹
+    this.bullets = this.bullets.filter(b => b.active);
+
+    // 更新波次
+    const waveResult = this.waveManager.update(dt, this.zombies);
+    if (waveResult === 'NORMAL' || waveResult === 'SHIELD' || waveResult === 'GIANT') {
+      this.spawnZombie(waveResult);
+    } else if (waveResult === 'wave_clear') {
+      // 武器升级
+      if (this.player.weaponLevel < 5) {
+        this.player.weaponLevel++;
+        this.levelUpText = 2000;
+      }
+      // 清除残余僵尸
+      this.zombies = [];
+      this.bullets = [];
+    } else if (waveResult === 'victory') {
+      this.state = 'victory';
+    }
+
+    // 武器升级文字淡出
+    if (this.levelUpText > 0) this.levelUpText -= dt * 16.67;
+
+    // 屏幕震动
+    if (this.shakeTimer > 0) this.shakeTimer -= dt * 16.67;
+
+    // 粒子
+    this.particles.update(dt);
+  }
+
+  spawnZombie(type) {
+    const cfg = CONFIG.ZOMBIE[type];
+    const side = Math.random() > 0.5 ? 1 : 0;
+    const x = side === 0 ? -cfg.width : CONFIG.WIDTH;
+    const y = CONFIG.GROUND_Y - cfg.height;
+    this.zombies.push(new Zombie(x, y, type, cfg));
+  }
+
+  draw(now) {
+    const ctx = this.ctx;
+    ctx.save();
+
+    // 屏幕震动
+    if (this.shakeTimer > 0) {
+      const intensity = this.shakeIntensity * (this.shakeTimer / 200);
+      ctx.translate(
+        (Math.random() - 0.5) * intensity,
+        (Math.random() - 0.5) * intensity
+      );
+    }
+
+    if (this.state === 'menu') {
+      this.drawMenu(ctx);
+    } else if (this.state === 'playing') {
+      this.drawGame(ctx, now);
+    } else if (this.state === 'gameover') {
+      this.drawGame(ctx, now);
+      this.drawGameOver(ctx);
+    } else if (this.state === 'victory') {
+      this.drawGame(ctx, now);
+      this.drawVictory(ctx);
+    }
+
+    ctx.restore();
+  }
+
+  drawMenu(ctx) {
+    // 背景
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+
+    // 装饰 - 远景建筑剪影
+    ctx.fillStyle = '#0d0d1a';
+    for (let i = 0; i < 8; i++) {
+      const bw = 60 + Math.sin(i * 2.3) * 30;
+      const bh = 100 + Math.sin(i * 1.7) * 80;
+      ctx.fillRect(i * 130 + 10, CONFIG.HEIGHT - bh - 40, bw, bh);
+    }
+
+    // 地面
+    ctx.fillStyle = '#2a2a3e';
+    ctx.fillRect(0, CONFIG.HEIGHT - 40, CONFIG.WIDTH, 40);
+
+    // 标题
+    ctx.fillStyle = '#ff4444';
+    ctx.font = 'bold 64px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 20;
+    ctx.fillText('疯狂僵尸', CONFIG.WIDTH / 2, 200);
+    ctx.shadowBlur = 0;
+
+    // 副标题
+    ctx.fillStyle = '#888';
+    ctx.font = '20px "Segoe UI", sans-serif';
+    ctx.fillText('坚持六波僵尸的袭击，活下来！', CONFIG.WIDTH / 2, 260);
+
+    // 操作提示
+    ctx.fillStyle = '#666';
+    ctx.font = '14px "Segoe UI", sans-serif';
+    ctx.fillText('A/D 或 方向键移动  |  W/空格 跳跃  |  鼠标点击/J键 射击', CONFIG.WIDTH / 2, 300);
+
+    // 开始按钮
+    ctx.fillStyle = '#cc3333';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 15;
+    this._drawRoundRect(ctx, CONFIG.WIDTH / 2 - 100, 340, 200, 50, 10);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px "Segoe UI", sans-serif';
+    ctx.fillText('开始游戏', CONFIG.WIDTH / 2, 372);
+
+    // 小僵尸装饰
+    this._drawMenuZombie(ctx, 150, CONFIG.HEIGHT - 40);
+    this._drawMenuZombie(ctx, CONFIG.WIDTH - 150, CONFIG.HEIGHT - 40);
+  }
+
+  _drawMenuZombie(ctx, x, groundY) {
+    ctx.fillStyle = '#5a8f3c';
+    ctx.fillRect(x - 10, groundY - 40, 20, 28);
+    ctx.fillStyle = '#7ab55c';
+    ctx.beginPath();
+    ctx.arc(x, groundY - 46, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath();
+    ctx.arc(x + 3, groundY - 48, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  _drawRoundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  drawGame(ctx, now) {
+    // 天空渐变背景
+    const grad = ctx.createLinearGradient(0, 0, 0, CONFIG.HEIGHT);
+    grad.addColorStop(0, '#0a0a1a');
+    grad.addColorStop(0.6, '#1a1a2e');
+    grad.addColorStop(1, '#2a2a3e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+
+    // 远景建筑
+    ctx.fillStyle = '#12121f';
+    for (let i = 0; i < 10; i++) {
+      const bw = 50 + Math.sin(i * 2.1) * 25;
+      const bh = 60 + Math.sin(i * 1.5) * 50;
+      ctx.fillRect(i * 110 + 5, CONFIG.GROUND_Y - bh, bw, bh);
+      // 窗户
+      ctx.fillStyle = '#1a1a30';
+      for (let wy = CONFIG.GROUND_Y - bh + 8; wy < CONFIG.GROUND_Y - 10; wy += 16) {
+        for (let wx = i * 110 + 10; wx < i * 110 + 5 + bw - 10; wx += 14) {
+          ctx.fillRect(wx, wy, 6, 8);
+        }
+      }
+      ctx.fillStyle = '#12121f';
+    }
+
+    // 地面
+    ctx.fillStyle = '#3a3a4e';
+    ctx.fillRect(0, CONFIG.GROUND_Y, CONFIG.WIDTH, CONFIG.HEIGHT - CONFIG.GROUND_Y);
+    ctx.strokeStyle = '#4a4a5e';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, CONFIG.GROUND_Y);
+    ctx.lineTo(CONFIG.WIDTH, CONFIG.GROUND_Y);
+    ctx.stroke();
+
+    // 平台
+    for (const p of CONFIG.PLATFORMS) {
+      // 平台主体
+      ctx.fillStyle = '#5a5a6e';
+      ctx.fillRect(p.x, p.y, p.width, p.height);
+      // 顶面高亮
+      ctx.fillStyle = '#7a7a8e';
+      ctx.fillRect(p.x, p.y, p.width, 4);
+      // 侧面阴影
+      ctx.fillStyle = '#4a4a5e';
+      ctx.fillRect(p.x, p.y + p.height - 3, p.width, 3);
+      // 纹理线
+      ctx.strokeStyle = '#4a4a5e';
+      ctx.lineWidth = 1;
+      for (let lx = p.x + 15; lx < p.x + p.width; lx += 20) {
+        ctx.beginPath();
+        ctx.moveTo(lx, p.y + 4);
+        ctx.lineTo(lx, p.y + p.height - 3);
+        ctx.stroke();
+      }
+    }
+
+    // 僵尸
+    for (const z of this.zombies) z.draw(ctx);
+
+    // 子弹
+    for (const b of this.bullets) b.draw(ctx);
+
+    // 玩家
+    if (this.player) this.player.draw(ctx, now);
+
+    // 粒子
+    this.particles.draw(ctx);
+
+    // HUD
+    this.drawHUD(ctx);
+
+    // 武器升级提示
+    if (this.levelUpText > 0) {
+      const alpha = clamp(this.levelUpText / 500, 0, 1);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#ffdd00';
+      ctx.font = 'bold 36px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#ffaa00';
+      ctx.shadowBlur = 15;
+      ctx.fillText(`武器升级! Lv.${this.player.weaponLevel + 1}`, CONFIG.WIDTH / 2, 200);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+
+    // 波次间歇提示
+    if (this.waveManager.state === 'intermission') {
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = 'bold 28px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`第 ${this.waveManager.currentWave + 2} 波即将来临...`, CONFIG.WIDTH / 2, 160);
+      const sec = Math.ceil(this.waveManager.intermissionTimer / 1000);
+      ctx.font = '20px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#aaa';
+      ctx.fillText(`${sec}秒后开始`, CONFIG.WIDTH / 2, 195);
+    }
+  }
+
+  drawHUD(ctx) {
+    ctx.textAlign = 'left';
+
+    // 生命值
+    ctx.font = '24px "Segoe UI", sans-serif';
+    let hearts = '';
+    for (let i = 0; i < CONFIG.PLAYER.MAX_HP; i++) {
+      hearts += i < this.player.hp ? '❤️' : '🖤';
+    }
+    ctx.fillText(hearts, 15, 35);
+
+    // 武器等级
+    ctx.fillStyle = '#ffdd00';
+    ctx.font = 'bold 16px "Segoe UI", sans-serif';
+    ctx.fillText(`🔫 武器 Lv.${this.player.weaponLevel + 1}`, 15, 65);
+
+    // 击杀数
+    ctx.fillStyle = '#ccc';
+    ctx.font = '16px "Segoe UI", sans-serif';
+    ctx.fillText(`💀 击杀: ${this.kills}`, 15, 90);
+
+    // 波次和倒计时
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ff8844';
+    ctx.font = 'bold 20px "Segoe UI", sans-serif';
+    const waveNum = this.waveManager.currentWave + 1;
+    ctx.fillText(`第 ${waveNum}/6 波`, CONFIG.WIDTH - 15, 30);
+
+    if (this.waveManager.state === 'active') {
+      const timeLeft = this.waveManager.getTimeLeft();
+      ctx.fillStyle = timeLeft <= 10 ? '#ff4444' : '#aaa';
+      ctx.font = '18px "Segoe UI", sans-serif';
+      ctx.fillText(`⏱ ${timeLeft}s`, CONFIG.WIDTH - 15, 55);
+
+      // 剩余僵尸
+      const aliveCount = this.zombies.filter(z => !z.dying && z.active).length;
+      const queueCount = this.waveManager.spawnQueue.length;
+      ctx.fillStyle = '#888';
+      ctx.font = '14px "Segoe UI", sans-serif';
+      ctx.fillText(`剩余: ${aliveCount + queueCount}`, CONFIG.WIDTH - 15, 78);
+    }
+
+    ctx.textAlign = 'left';
+  }
+
+  drawGameOver(ctx) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff3333';
+    ctx.font = 'bold 56px "Segoe UI", sans-serif';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 20;
+    ctx.fillText('游戏结束', CONFIG.WIDTH / 2, 220);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#ccc';
+    ctx.font = '22px "Segoe UI", sans-serif';
+    ctx.fillText(`存活至第 ${this.waveManager.currentWave + 1} 波`, CONFIG.WIDTH / 2, 280);
+    ctx.fillText(`击杀僵尸: ${this.kills}`, CONFIG.WIDTH / 2, 315);
+
+    // 武器等级
+    ctx.fillStyle = '#ffdd00';
+    ctx.font = '18px "Segoe UI", sans-serif';
+    ctx.fillText(`武器等级: Lv.${this.player.weaponLevel + 1}`, CONFIG.WIDTH / 2, 350);
+
+    // 重新开始按钮
+    ctx.fillStyle = '#cc3333';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 10;
+    this._drawRoundRect(ctx, CONFIG.WIDTH / 2 - 100, 380, 200, 50, 10);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px "Segoe UI", sans-serif';
+    ctx.fillText('重新开始', CONFIG.WIDTH / 2, 412);
+    ctx.textAlign = 'left';
+  }
+
+  drawVictory(ctx) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffdd00';
+    ctx.font = 'bold 56px "Segoe UI", sans-serif';
+    ctx.shadowColor = '#ffaa00';
+    ctx.shadowBlur = 20;
+    ctx.fillText('🎉 恭喜通关！', CONFIG.WIDTH / 2, 220);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#ccc';
+    ctx.font = '22px "Segoe UI", sans-serif';
+    ctx.fillText('你成功抵御了所有六波僵尸的进攻！', CONFIG.WIDTH / 2, 280);
+    ctx.fillText(`击杀僵尸: ${this.kills}`, CONFIG.WIDTH / 2, 315);
+
+    ctx.fillStyle = '#ffdd00';
+    ctx.font = '18px "Segoe UI", sans-serif';
+    ctx.fillText(`最终武器等级: Lv.${this.player.weaponLevel + 1}`, CONFIG.WIDTH / 2, 350);
+
+    // 重新开始按钮
+    ctx.fillStyle = '#44aa44';
+    ctx.shadowColor = '#44ff44';
+    ctx.shadowBlur = 10;
+    this._drawRoundRect(ctx, CONFIG.WIDTH / 2 - 100, 380, 200, 50, 10);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px "Segoe UI", sans-serif';
+    ctx.fillText('再来一局', CONFIG.WIDTH / 2, 412);
+    ctx.textAlign = 'left';
+  }
+}
+
+// ============================================================
+// 启动游戏
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+new Game(canvas);
+</script>
+</body>
+</html>
