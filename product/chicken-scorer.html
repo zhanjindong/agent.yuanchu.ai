@@ -317,6 +317,38 @@
         }
     }
 
+    function isCurrentRoundEmpty() {
+        return S.currentRoundData.lanes.every(l => l.length === 0) &&
+               Object.keys(S.currentRoundData.luckyMap).length === 0;
+    }
+
+    function undoLastRound() {
+        if (S.rounds.length === 0) return;
+        const lastRound = S.rounds.pop();
+        for (let i = 0; i < S.config.players.length; i++) {
+            S.totals[i] = (S.totals[i] || 0) - lastRound.results[i];
+        }
+        S.currentRoundData = {
+            lanes: lastRound.lanes.map(l => [...l]),
+            currentLane: 0,
+            luckyMap: { ...lastRound.luckyMap }
+        };
+        S.phase = 'playing';
+        saveState();
+        render();
+    }
+
+    function recalcCurrentRound() {
+        if (!confirm('确定要重新计算本轮吗？')) return;
+        undoLastRound();
+    }
+
+    function recalcPreviousRound() {
+        if (!confirm('确定要撤回上一轮重新计算吗？')) return;
+        S.currentRound--;
+        undoLastRound();
+    }
+
     function resetCurrentLane() {
         const lane = S.currentRoundData.currentLane;
         S.currentRoundData.lanes[lane] = [];
@@ -562,6 +594,12 @@
             📊 结算本轮
         </button>
 
+        ${S.rounds.length > 0 && isCurrentRoundEmpty() ? `
+        <button class="btn btn-secondary btn-block" onclick="recalcPreviousRound()" style="margin-top:8px;padding:12px;font-size:14px;">
+            🔄 重算上一轮
+        </button>
+        ` : ''}
+
         ${runningTotalHtml}
         ${historyHtml}`;
     }
@@ -617,6 +655,7 @@
 
         <div class="confirm-bar">
             <button class="btn btn-primary" onclick="nextRound()" style="flex:2">▶ 下一轮</button>
+            <button class="btn btn-secondary" onclick="recalcCurrentRound()">🔄 重算</button>
             <button class="btn btn-danger" onclick="endGame()">结束游戏</button>
         </div>
 
