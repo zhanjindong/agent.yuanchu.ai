@@ -314,8 +314,8 @@ class InputManager {
             const zones = {
                 up:    { x: bx - S/2, y: by - S*2 - P, w: S, h: S },
                 down:  { x: bx - S/2, y: by, w: S, h: S },
-                left:  { x: bx - S*1.5 - P, y: by - S - P/2, w: S, h: S },
-                right: { x: bx + S/2 + P, y: by - S - P/2, w: S, h: S },
+                left:  { x: CONFIG.WIDTH - P - S*2 - P, y: by - S - P/2, w: S, h: S },
+                right: { x: CONFIG.WIDTH - P - S, y: by - S - P/2, w: S, h: S },
             };
             const E = 12;
             for (const pt of pts) {
@@ -347,10 +347,10 @@ class InputManager {
         const S = CONFIG.TOUCH.SIZE, P = CONFIG.TOUCH.PAD;
         const bx = P + S, by = CONFIG.HEIGHT - P - S;
         const btns = [
-            { d:'up',   x: bx-S/2,       y: by-S*2-P,   sym:'▲' },
-            { d:'down', x: bx-S/2,       y: by,          sym:'▼' },
-            { d:'left', x: bx-S*1.5-P,   y: by-S-P/2,   sym:'◀' },
-            { d:'right',x: bx+S/2+P,     y: by-S-P/2,   sym:'▶' },
+            { d:'up',   x: bx-S/2,                  y: by-S*2-P,   sym:'▲' },
+            { d:'down', x: bx-S/2,                  y: by,          sym:'▼' },
+            { d:'left', x: CONFIG.WIDTH-P-S*2-P,    y: by-S-P/2,   sym:'◀' },
+            { d:'right',x: CONFIG.WIDTH-P-S,         y: by-S-P/2,   sym:'▶' },
         ];
         for (const b of btns) {
             const on = this.ts[b.d];
