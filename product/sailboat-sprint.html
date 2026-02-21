@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>帆船冲刺</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a2a4a; display: flex; justify-content: center; align-items: center; font-family: 'Courier New', monospace; }
+canvas { display: block; image-rendering: pixelated; touch-action: none; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+// ============================================================
+// SECTION 1: CONFIG
+// ============================================================
+const CONFIG = {
+    WIDTH: 400,
+    HEIGHT: 700,
+    FPS: 60,
+    DT_MAX: 33,
+
+    CHANNEL: {
+        WIDTH: 300,
+        WATER_COLOR: '#1a6fb5',
+        WATER_COLOR2: '#1565a0',
+        SHORE_COLOR: '#d4a843',
+        SHORE_COLOR2: '#c49a38',
+        BORDER_COLOR: '#f5deb3',
+        BORDER_WIDTH: 5,
+        SEGMENT_HEIGHT: 4,
+        CURVE_SMOOTHING: 0.015,
+        MAX_CURVE: 55,
+    },
+
+    BOAT: {
+        WIDTH: 18,
+        HEIGHT: 34,
+        MAX_SPEED: 4.8,
+        ACCELERATION: 0.10,
+        BRAKE_FORCE: 0.12,
+        FRICTION: 0.018,
+        TURN_SPEED: 0.038,
+        MAX_TURN: 0.40,
+        DRIFT_FACTOR: 0.92,
+        COLOR: '#e74c3c',
+        SCREEN_Y: 0.72,
+    },
+
+    AI: {
+        COUNT: 20,
+        COLORS: ['#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c',
+                 '#e67e22','#00bcd4','#ff69b4','#8bc34a','#ff7043',
+                 '#26a69a','#ab47bc','#5c6bc0','#66bb6a','#ffa726',
+                 '#ef5350','#42a5f5','#78909c','#d4e157','#ec407a'],
+        SPEED_BASE: 0.65,
+        SPEED_VAR: 0.14,
+        LOOK_AHEAD: 120,
+        LANE_SPEED: 2.2,
+        AVOID_PAD: 22,
+    },
+
+    OBS: {
+        TYPES: {
+            WAVE_S:  { w: 30, h: 14, color: '#4fc3f7', spd: 0 },
+            WAVE_M:  { w: 40, h: 18, color: '#29b6f6', spd: 0 },
+            WAVE_L:  { w: 55, h: 20, color: '#0288d1', spd: 0 },
+            WAVE_MH: { w: 34, h: 16, color: '#0277bd', spd: 1.2 },
+            WAVE_MV: { w: 28, h: 22, color: '#01579b', spd: 1.4 },
+        },
+        GAP: 45,
+        INTERVAL: 130,
+    },
+
+    HIT: {
+        SPEED_MULT: 0.35,
+        BOUNCE: 3,
+        FLASH_MS: 300,
+        INVINCIBLE_MS: 1500,
+    },
+
+    LIVES: 3,
+
+    DIFFICULTY: {
+        EASY:      { aiSpeedMult: 0.80, aiSpeedVar: 0.15, obsDensMult: 0.6, obsMovProb: 0.15, growthRate: 1.0, label: '简单' },
+        HARD:      { aiSpeedMult: 1.00, aiSpeedVar: 0.10, obsDensMult: 1.0, obsMovProb: 0.35, growthRate: 1.3, label: '困难' },
+        LEGENDARY: { aiSpeedMult: 1.15, aiSpeedVar: 0.05, obsDensMult: 1.5, obsMovProb: 0.55, growthRate: 1.6, label: '传奇' },
+    },
+
+    LEVELS_BASE: [
+        { len: 3000,  dens: 0.025, mov: 0,    nar: 0,  name: '第1关',  aiBoost: 0 },
+        { len: 3200,  dens: 0.030, mov: 0,    nar: 0,  name: '第2关',  aiBoost: 0.02 },
+        { len: 3500,  dens: 0.035, mov: 0,    nar: 0,  name: '第3关',  aiBoost: 0.04 },
+        { len: 4000,  dens: 0.040, mov: 0.10, nar: 0,  name: '第4关',  aiBoost: 0.06 },
+        { len: 4500,  dens: 0.050, mov: 0.15, nar: 5,  name: '第5关',  aiBoost: 0.08 },
+        { len: 5000,  dens: 0.055, mov: 0.20, nar: 8,  name: '第6关',  aiBoost: 0.10 },
+        { len: 5500,  dens: 0.060, mov: 0.25, nar: 12, name: '第7关',  aiBoost: 0.12 },
+        { len: 6000,  dens: 0.070, mov: 0.30, nar: 16, name: '第8关',  aiBoost: 0.14 },
+        { len: 6500,  dens: 0.080, mov: 0.35, nar: 20, name: '第9关',  aiBoost: 0.16 },
+        { len: 7000,  dens: 0.085, mov: 0.40, nar: 24, name: '第10关', aiBoost: 0.18 },
+        { len: 7500,  dens: 0.090, mov: 0.45, nar: 28, name: '第11关', aiBoost: 0.20 },
+        { len: 8000,  dens: 0.095, mov: 0.50, nar: 32, name: '第12关', aiBoost: 0.22 },
+        { len: 8500,  dens: 0.100, mov: 0.55, nar: 36, name: '第13关', aiBoost: 0.24 },
+        { len: 9500,  dens: 0.110, mov: 0.60, nar: 40, name: '第14关', aiBoost: 0.28 },
+    ],
+
+    QUALIFY_RANK: 3,
+
+    TOUCH: {
+        SIZE: 50,
+        PAD: 10,
+        ALPHA: 0.28,
+        ACTIVE_ALPHA: 0.55,
+    },
+};
+
+// ============================================================
+// SECTION 2: Utils
+// ============================================================
+const U = {
+    rand(a, b) { return Math.random() * (b - a) + a; },
+    randI(a, b) { return Math.floor(this.rand(a, b + 1)); },
+    clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; },
+    lerp(a, b, t) { return a + (b - a) * t; },
+    rectHit(a, b) {
+        return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    },
+};
+
+// ============================================================
+// SECTION 3: AudioManager
+// ============================================================
+class AudioManager {
+    constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.bgmNodes = [];
+        this.masterGain = null;
+        this.initialized = false;
+        this._bgmTimer = null;
+        this._bgmGain = null;
+    }
+    init() {
+        if (this.initialized) return;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.connect(this.ctx.destination);
+            this.initialized = true;
+            if (this.ctx.state === 'suspended') this.ctx.resume();
+        } catch(e) {}
+    }
+    playBGM() {
+        if (!this.ctx || this.bgmNodes.length > 0) return;
+        const ctx = this.ctx;
+        const bgmGain = ctx.createGain();
+        bgmGain.gain.value = this.muted ? 0 : 0.12;
+        bgmGain.connect(this.masterGain);
+
+        const notes = [261.6, 293.7, 329.6, 392.0, 440.0, 392.0, 329.6, 293.7];
+        const dur = 0.5;
+        const loopLen = notes.length * dur;
+
+        const playMelody = () => {
+            if (this.bgmNodes.length === 0) return;
+            const now = ctx.currentTime;
+            const melGain = ctx.createGain();
+            melGain.gain.value = 0.08;
+            melGain.connect(bgmGain);
+            for (let i = 0; i < notes.length; i++) {
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = notes[i] * 0.5;
+                const ng = ctx.createGain();
+                ng.gain.setValueAtTime(0, now + i * dur);
+                ng.gain.linearRampToValueAtTime(0.3, now + i * dur + 0.05);
+                ng.gain.linearRampToValueAtTime(0, now + i * dur + dur - 0.05);
+                osc.connect(ng);
+                ng.connect(melGain);
+                osc.start(now + i * dur);
+                osc.stop(now + i * dur + dur);
+            }
+            this._bgmTimer = setTimeout(playMelody, loopLen * 1000);
+        };
+
+        const bufLen = ctx.sampleRate * 2;
+        const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+        const noise = ctx.createBufferSource();
+        noise.buffer = buf;
+        noise.loop = true;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 200;
+        filter.Q.value = 1;
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.value = 0.06;
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(bgmGain);
+        noise.start();
+
+        this.bgmNodes = [noise, bgmGain];
+        this._bgmGain = bgmGain;
+        playMelody();
+    }
+    stopBGM() {
+        clearTimeout(this._bgmTimer);
+        for (const n of this.bgmNodes) { try { if (n.stop) n.stop(); else n.disconnect(); } catch(e) { try { n.disconnect(); } catch(e2){} } }
+        this.bgmNodes = [];
+    }
+    pauseBGM() {
+        if (this._bgmGain) this._bgmGain.gain.value = 0;
+        clearTimeout(this._bgmTimer);
+    }
+    resumeBGM() {
+        if (!this._bgmGain) return;
+        if (!this.muted) this._bgmGain.gain.value = 0.12;
+        if (this.bgmNodes.length > 0 && !this._bgmTimer) this.playBGM();
+    }
+    playSFX(type) {
+        if (!this.ctx || this.muted) return;
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+        const g = ctx.createGain();
+        g.connect(this.masterGain);
+        if (type === 'hit') {
+            const o = ctx.createOscillator();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(200, now);
+            o.frequency.linearRampToValueAtTime(60, now + 0.15);
+            g.gain.setValueAtTime(0.3, now);
+            g.gain.linearRampToValueAtTime(0, now + 0.15);
+            o.connect(g); o.start(now); o.stop(now + 0.15);
+        } else if (type === 'advance') {
+            [523.3, 659.3, 784.0, 1046.5].forEach((f, i) => {
+                const o = ctx.createOscillator();
+                o.type = 'sine';
+                o.frequency.value = f;
+                const ng = ctx.createGain();
+                ng.gain.setValueAtTime(0, now + i * 0.1);
+                ng.gain.linearRampToValueAtTime(0.25, now + i * 0.1 + 0.03);
+                ng.gain.linearRampToValueAtTime(0, now + i * 0.1 + 0.1);
+                o.connect(ng); ng.connect(this.masterGain);
+                o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.12);
+            });
+        } else if (type === 'fail') {
+            const o = ctx.createOscillator();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(392, now);
+            o.frequency.linearRampToValueAtTime(196, now + 0.4);
+            g.gain.setValueAtTime(0.3, now);
+            g.gain.linearRampToValueAtTime(0, now + 0.4);
+            o.connect(g); o.start(now); o.stop(now + 0.4);
+        } else if (type === 'countdown') {
+            const o = ctx.createOscillator();
+            o.type = 'square';
+            o.frequency.value = 800;
+            g.gain.setValueAtTime(0.15, now);
+            g.gain.linearRampToValueAtTime(0, now + 0.1);
+            o.connect(g); o.start(now); o.stop(now + 0.1);
+        } else if (type === 'go') {
+            const o = ctx.createOscillator();
+            o.type = 'square';
+            o.frequency.value = 1000;
+            g.gain.setValueAtTime(0.2, now);
+            g.gain.linearRampToValueAtTime(0, now + 0.2);
+            o.connect(g); o.start(now); o.stop(now + 0.2);
+        }
+    }
+    toggleMute() {
+        this.muted = !this.muted;
+        if (this.masterGain) this.masterGain.gain.value = this.muted ? 0 : 1;
+    }
+}
+
+// ============================================================
+// SECTION 4: InputManager
+// ============================================================
+class InputManager {
+    constructor(cv) {
+        this.keys = {};
+        this.ts = { up: false, down: false, left: false, right: false };
+        this.tpts = [];
+        this.cv = cv;
+        this.taps = [];
+        this._initKB();
+        this._initTouch();
+    }
+    _initKB() {
+        window.addEventListener('keydown', e => {
+            this.keys[e.code] = true;
+            if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Escape'].includes(e.code)) e.preventDefault();
+        });
+        window.addEventListener('keyup', e => { this.keys[e.code] = false; });
+    }
+    _initTouch() {
+        const cvt = (e) => {
+            const r = this.cv.getBoundingClientRect();
+            const sx = CONFIG.WIDTH / r.width, sy = CONFIG.HEIGHT / r.height;
+            const pts = [];
+            for (let i = 0; i < e.touches.length; i++) {
+                pts.push({ x: (e.touches[i].clientX - r.left) * sx, y: (e.touches[i].clientY - r.top) * sy });
+            }
+            return pts;
+        };
+        const upd = (pts) => {
+            this.ts = { up: false, down: false, left: false, right: false };
+            const S = CONFIG.TOUCH.SIZE, P = CONFIG.TOUCH.PAD;
+            const bx = P + S, by = CONFIG.HEIGHT - P - S;
+            const zones = {
+                up:    { x: bx - S/2, y: by - S*2 - P, w: S, h: S },
+                down:  { x: bx - S/2, y: by, w: S, h: S },
+                left:  { x: bx - S*1.5 - P, y: by - S - P/2, w: S, h: S },
+                right: { x: bx + S/2 + P, y: by - S - P/2, w: S, h: S },
+            };
+            const E = 12;
+            for (const pt of pts) {
+                for (const d of ['up','down','left','right']) {
+                    const z = zones[d];
+                    if (pt.x >= z.x-E && pt.x <= z.x+z.w+E && pt.y >= z.y-E && pt.y <= z.y+z.h+E) this.ts[d] = true;
+                }
+            }
+            this.tpts = pts;
+        };
+        this.cv.addEventListener('touchstart', e => { e.preventDefault(); const pts = cvt(e); upd(pts); for (const p of pts) for (const c of this.taps) c(p.x,p.y); }, { passive: false });
+        this.cv.addEventListener('touchmove', e => { e.preventDefault(); upd(cvt(e)); }, { passive: false });
+        this.cv.addEventListener('touchend', e => { e.preventDefault(); if (e.touches.length === 0) { this.ts = { up:false,down:false,left:false,right:false }; this.tpts = []; } else upd(cvt(e)); }, { passive: false });
+        this.cv.addEventListener('click', e => {
+            const r = this.cv.getBoundingClientRect();
+            const x = (e.clientX - r.left) * CONFIG.WIDTH / r.width;
+            const y = (e.clientY - r.top) * CONFIG.HEIGHT / r.height;
+            for (const c of this.taps) c(x, y);
+        });
+    }
+    onTap(fn) { this.taps.push(fn); }
+    get up()    { return this.keys['ArrowUp']   || this.keys['KeyW'] || this.ts.up; }
+    get down()  { return this.keys['ArrowDown'] || this.keys['KeyS'] || this.ts.down; }
+    get left()  { return this.keys['ArrowLeft'] || this.keys['KeyA'] || this.ts.left; }
+    get right() { return this.keys['ArrowRight']|| this.keys['KeyD'] || this.ts.right; }
+    get esc()   { return this.keys['Escape']; }
+    eatEsc()    { this.keys['Escape'] = false; }
+    drawTouch(ctx) {
+        const S = CONFIG.TOUCH.SIZE, P = CONFIG.TOUCH.PAD;
+        const bx = P + S, by = CONFIG.HEIGHT - P - S;
+        const btns = [
+            { d:'up',   x: bx-S/2,       y: by-S*2-P,   sym:'▲' },
+            { d:'down', x: bx-S/2,       y: by,          sym:'▼' },
+            { d:'left', x: bx-S*1.5-P,   y: by-S-P/2,   sym:'◀' },
+            { d:'right',x: bx+S/2+P,     y: by-S-P/2,   sym:'▶' },
+        ];
+        for (const b of btns) {
+            const on = this.ts[b.d];
+            ctx.globalAlpha = on ? CONFIG.TOUCH.ACTIVE_ALPHA : CONFIG.TOUCH.ALPHA;
+            ctx.fillStyle = '#fff';
+            this._roundRect(ctx, b.x, b.y, S, S, 8);
+            ctx.fill();
+            ctx.globalAlpha = on ? 0.9 : 0.6;
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(b.sym, b.x+S/2, b.y+S/2);
+        }
+        ctx.globalAlpha = 1;
+    }
+    _roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+        ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+        ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+        ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+        ctx.closePath();
+    }
+}
+
+// ============================================================
+// SECTION 5: Camera
+// ============================================================
+class Camera {
+    constructor() { this.y = 0; }
+    follow(wy) { this.y = wy - CONFIG.HEIGHT * CONFIG.BOAT.SCREEN_Y; }
+    toScreen(wy) { return wy - this.y; }
+}
+
+// ============================================================
+// SECTION 6: Channel - 航道
+// ============================================================
+class Channel {
+    constructor() { this.segs = []; this.curveOff = 0; this.curveTgt = 0; this.genY = 0; this.finishY = -Infinity; this.nar = 0; this.time = 0; }
+
+    init(finishY, nar) {
+        this.segs = []; this.curveOff = 0; this.curveTgt = 0; this.genY = 200; this.finishY = finishY; this.nar = nar || 0;
+    }
+
+    generate(camY) {
+        const SH = CONFIG.CHANNEL.SEGMENT_HEIGHT;
+        const top = camY - 200;
+        while (this.genY > top) {
+            this.genY -= SH;
+            if (Math.random() < 0.012) this.curveTgt = U.rand(-CONFIG.CHANNEL.MAX_CURVE, CONFIG.CHANNEL.MAX_CURVE);
+            this.curveOff = U.lerp(this.curveOff, this.curveTgt, CONFIG.CHANNEL.CURVE_SMOOTHING);
+            const cx = CONFIG.WIDTH / 2 + this.curveOff;
+            const hw = (CONFIG.CHANNEL.WIDTH - this.nar) / 2;
+            this.segs.push({ y: this.genY, l: cx - hw, r: cx + hw });
+        }
+        const bot = camY + CONFIG.HEIGHT + 300;
+        while (this.segs.length > 0 && this.segs[0].y > bot) this.segs.shift();
+    }
+
+    bounds(wy) {
+        const SH = CONFIG.CHANNEL.SEGMENT_HEIGHT;
+        for (let i = this.segs.length - 1; i >= 0; i--) {
+            if (this.segs[i].y <= wy && this.segs[i].y + SH > wy) return this.segs[i];
+        }
+        const hw = (CONFIG.CHANNEL.WIDTH - this.nar) / 2;
+        return { y: wy, l: CONFIG.WIDTH / 2 - hw, r: CONFIG.WIDTH / 2 + hw };
+    }
+
+    draw(ctx, cam, dt) {
+        this.time += dt * 0.02;
+        ctx.fillStyle = CONFIG.CHANNEL.SHORE_COLOR;
+        ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+
+        const SH = CONFIG.CHANNEL.SEGMENT_HEIGHT;
+        for (let i = 0; i < this.segs.length; i++) {
+            const s = this.segs[i];
+            const sy = cam.toScreen(s.y);
+            if (sy > CONFIG.HEIGHT + SH || sy < -SH) continue;
+
+            const stripe = (Math.floor((s.y + this.time * 40) / 24) & 1) === 0;
+            ctx.fillStyle = stripe ? CONFIG.CHANNEL.WATER_COLOR : CONFIG.CHANNEL.WATER_COLOR2;
+            ctx.fillRect(s.l, sy, s.r - s.l, SH);
+
+            const gstripe = (Math.floor(s.y / 16) & 1) === 0;
+            if (gstripe) {
+                ctx.fillStyle = CONFIG.CHANNEL.SHORE_COLOR2;
+                ctx.fillRect(0, sy, s.l, SH);
+                ctx.fillRect(s.r, sy, CONFIG.WIDTH - s.r, SH);
+            }
+
+            ctx.fillStyle = CONFIG.CHANNEL.BORDER_COLOR;
+            ctx.fillRect(s.l - CONFIG.CHANNEL.BORDER_WIDTH, sy, CONFIG.CHANNEL.BORDER_WIDTH, SH);
+            ctx.fillRect(s.r, sy, CONFIG.CHANNEL.BORDER_WIDTH, SH);
+
+            if ((Math.floor((s.y + this.time * 20) / 40) % 4) === 0) {
+                ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                ctx.fillRect((s.l + s.r) / 2 - 8, sy, 16, SH);
+            }
+        }
+
+        if (this.finishY > -Infinity) {
+            const fsy = cam.toScreen(this.finishY);
+            if (fsy > -40 && fsy < CONFIG.HEIGHT + 40) {
+                const seg = this.bounds(this.finishY);
+                const bs = 10;
+                for (let x = seg.l; x < seg.r; x += bs) {
+                    for (let row = 0; row < 3; row++) {
+                        const col = Math.floor((x - seg.l) / bs);
+                        ctx.fillStyle = (col + row) % 2 === 0 ? '#fff' : '#e74c3c';
+                        ctx.fillRect(x, fsy + row * bs, bs, bs);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================
+// SECTION 7: WaveObstacle - 海浪障碍物
+// ============================================================
+class WaveObstacle {
+    constructor(type, x, y, tl, tr) {
+        const c = CONFIG.OBS.TYPES[type];
+        this.type = type; this.x = x; this.y = y; this.w = c.w; this.h = c.h;
+        this.color = c.color; this.spd = c.spd; this.baseX = x; this.baseY = y;
+        this.tl = tl; this.tr = tr; this.dir = Math.random() < 0.5 ? 1 : -1;
+    }
+    update(dt) {
+        if (this.type === 'WAVE_MH') {
+            this.x += this.spd * this.dir * dt;
+            if (this.x <= this.tl + 4 || this.x + this.w >= this.tr - 4) this.dir *= -1;
+            this.x = U.clamp(this.x, this.tl + 2, this.tr - this.w - 2);
+        } else if (this.type === 'WAVE_MV') {
+            this.y += this.spd * this.dir * dt;
+            if (Math.abs(this.y - this.baseY) > 35) this.dir *= -1;
+        }
+    }
+    box() { return { x: this.x, y: this.y, w: this.w, h: this.h }; }
+    draw(ctx, cam) {
+        const sy = cam.toScreen(this.y);
+        if (sy < -50 || sy > CONFIG.HEIGHT + 50) return;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(this.x, sy + this.h);
+        ctx.quadraticCurveTo(this.x + this.w * 0.25, sy - this.h * 0.3, this.x + this.w / 2, sy + this.h * 0.3);
+        ctx.quadraticCurveTo(this.x + this.w * 0.75, sy + this.h * 0.8, this.x + this.w, sy + this.h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.arc(this.x + this.w * 0.35, sy + this.h * 0.2, 3, 0, Math.PI * 2);
+        ctx.arc(this.x + this.w * 0.6, sy + this.h * 0.35, 2, 0, Math.PI * 2);
+        ctx.fill();
+        if (this.spd > 0) {
+            ctx.fillStyle = 'rgba(255,255,0,0.6)';
+            ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('⚠', this.x + this.w / 2, sy - 2);
+        }
+    }
+}
+
+class WaveManager {
+    constructor() { this.obs = []; this.spawnY = 0; }
+    init(y) { this.obs = []; this.spawnY = y || 0; }
+
+    generate(camY, dens, movR, channel) {
+        const tgt = camY - CONFIG.HEIGHT;
+        while (this.spawnY > tgt) {
+            this.spawnY -= CONFIG.OBS.INTERVAL;
+            if (Math.random() > dens) continue;
+            const seg = channel.bounds(this.spawnY);
+            const tw = seg.r - seg.l;
+            if (tw < 50) continue;
+
+            const statics = ['WAVE_S','WAVE_M','WAVE_L'];
+            const movers = ['WAVE_MH','WAVE_MV'];
+            const cnt = U.randI(1, Math.min(3, Math.floor(tw / CONFIG.OBS.GAP)));
+            const placed = [];
+
+            for (let i = 0; i < cnt; i++) {
+                const isM = Math.random() < movR;
+                const pool = isM ? movers : statics;
+                const type = pool[U.randI(0, pool.length - 1)];
+                const cfg = CONFIG.OBS.TYPES[type];
+                let x, ok = false, tries = 0;
+                while (tries < 20 && !ok) {
+                    x = U.rand(seg.l + 4, seg.r - cfg.w - 4);
+                    ok = placed.every(p => Math.abs(x - p) >= CONFIG.OBS.GAP);
+                    tries++;
+                }
+                if (ok) {
+                    this.obs.push(new WaveObstacle(type, x, this.spawnY, seg.l, seg.r));
+                    placed.push(x);
+                }
+            }
+            this._checkGap(this.spawnY, seg);
+        }
+    }
+
+    _checkGap(y, seg) {
+        const row = this.obs.filter(o => Math.abs(o.y - y) < 8);
+        if (!row.length) return;
+        row.sort((a, b) => a.x - b.x);
+        const minW = CONFIG.BOAT.WIDTH + 8;
+        const gaps = [];
+        gaps.push(row[0].x - seg.l);
+        for (let i = 0; i < row.length - 1; i++) gaps.push(row[i+1].x - (row[i].x + row[i].w));
+        gaps.push(seg.r - (row[row.length-1].x + row[row.length-1].w));
+        if (!gaps.some(g => g >= minW)) {
+            const last = row[row.length - 1];
+            const idx = this.obs.indexOf(last);
+            if (idx >= 0) this.obs.splice(idx, 1);
+        }
+    }
+
+    cleanup(camY) { this.obs = this.obs.filter(o => o.y < camY + CONFIG.HEIGHT + 200); }
+    update(dt) { for (const o of this.obs) o.update(dt); }
+    hit(box) { for (const o of this.obs) { if (U.rectHit(box, o.box())) return o; } return null; }
+    draw(ctx, cam) { for (const o of this.obs) o.draw(ctx, cam); }
+}
+
+// ============================================================
+// SECTION 8: Boat - 帆船基类
+// ============================================================
+class Boat {
+    constructor(x, y, color) {
+        this.x = x; this.wy = y; this.color = color;
+        this.w = CONFIG.BOAT.WIDTH; this.h = CONFIG.BOAT.HEIGHT;
+        this.spd = 0; this.ang = 0; this.vx = 0; this.flash = 0;
+    }
+    box() { return { x: this.x - this.w/2, y: this.wy - this.h/2, w: this.w, h: this.h }; }
+    _drawBoat(ctx, sx, sy) {
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(this.ang);
+        const w = this.w, h = this.h;
+        const fl = this.flash > 0 && (Math.floor(this.flash/50) & 1) === 0;
+        // hull
+        ctx.fillStyle = fl ? '#fff' : this.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // bow
+        ctx.beginPath();
+        ctx.moveTo(-w/2 + 2, -h/2 + 4);
+        ctx.lineTo(0, -h/2 - 4);
+        ctx.lineTo(w/2 - 2, -h/2 + 4);
+        ctx.closePath();
+        ctx.fill();
+        // sail
+        ctx.fillStyle = '#fff';
+        ctx.globalAlpha = fl ? 0.5 : 0.85;
+        ctx.beginPath();
+        ctx.moveTo(0, -h/2 + 4);
+        ctx.lineTo(w/2 + 3, h * 0.1);
+        ctx.lineTo(0, h * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        // mast
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -h/2 + 4);
+        ctx.lineTo(0, h * 0.3);
+        ctx.stroke();
+        // water splash
+        if (this.spd > 1) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 1;
+            const sp = Math.min(this.spd / 4, 1) * 5;
+            ctx.beginPath(); ctx.moveTo(-w/2 - sp, -h/2 + 2); ctx.lineTo(-w/2 + 2, -h/2 - sp); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(w/2 + sp, -h/2 + 2); ctx.lineTo(w/2 - 2, -h/2 - sp); ctx.stroke();
+        }
+        ctx.restore();
+    }
+}
+
+// ============================================================
+// SECTION 9: PlayerBoat
+// ============================================================
+class PlayerBoat extends Boat {
+    constructor() { super(CONFIG.WIDTH/2, 0, CONFIG.BOAT.COLOR); this.lives = CONFIG.LIVES; this.invTimer = 0; }
+    reset(sy) {
+        this.x = CONFIG.WIDTH/2; this.wy = sy || 0; this.spd = 0; this.ang = 0; this.vx = 0; this.flash = 0;
+        this.lives = CONFIG.LIVES; this.invTimer = 0;
+    }
+    update(dt, inp, channel) {
+        const P = CONFIG.BOAT;
+        if (inp.up) this.spd += P.ACCELERATION * dt;
+        else if (inp.down) this.spd -= P.BRAKE_FORCE * dt;
+        else {
+            if (Math.abs(this.spd) < P.FRICTION * dt) this.spd = 0;
+            else this.spd -= P.FRICTION * dt * Math.sign(this.spd);
+        }
+        this.spd = U.clamp(this.spd, -P.MAX_SPEED * 0.3, P.MAX_SPEED);
+
+        if (inp.left)  this.ang -= P.TURN_SPEED * dt * (this.spd > 0 ? 1 : -0.5);
+        if (inp.right) this.ang += P.TURN_SPEED * dt * (this.spd > 0 ? 1 : -0.5);
+        this.ang = U.clamp(this.ang, -P.MAX_TURN, P.MAX_TURN);
+        if (!inp.left && !inp.right) { this.ang *= 0.92; if (Math.abs(this.ang) < 0.008) this.ang = 0; }
+
+        const fx = Math.sin(this.ang) * this.spd;
+        this.vx = U.lerp(this.vx, fx, 1 - P.DRIFT_FACTOR);
+        this.x += this.vx * dt;
+        this.wy -= this.spd * dt;
+
+        const seg = channel.bounds(this.wy);
+        const hw = this.w / 2;
+        if (this.x - hw < seg.l) { this.x = seg.l + hw; this.vx = 0; this.spd *= 0.7; }
+        if (this.x + hw > seg.r) { this.x = seg.r - hw; this.vx = 0; this.spd *= 0.7; }
+        if (this.flash > 0) this.flash -= dt * 16.67;
+        if (this.invTimer > 0) this.invTimer -= dt * 16.67;
+    }
+    onHit(obs) {
+        if (this.invTimer > 0) return false;
+        this.lives--;
+        this.spd *= CONFIG.HIT.SPEED_MULT;
+        this.flash = CONFIG.HIT.FLASH_MS;
+        this.invTimer = CONFIG.HIT.INVINCIBLE_MS;
+        const dx = this.x - (obs.x + obs.w/2);
+        this.vx += Math.sign(dx || 1) * CONFIG.HIT.BOUNCE;
+        this.wy += CONFIG.HIT.BOUNCE * 0.8;
+        return true;
+    }
+    isDead() { return this.lives <= 0; }
+    draw(ctx, cam) {
+        if (this.invTimer > 0 && (Math.floor(this.invTimer / 80) & 1) === 0) return;
+        this._drawBoat(ctx, this.x, cam.toScreen(this.wy));
+    }
+}
+
+// ============================================================
+// SECTION 10: AIBoat
+// ============================================================
+class AIBoat extends Boat {
+    constructor(i, col) { super(0, 0, col); this.idx = i; this.baseSp = 0; this.tgtX = 0; this.avDir = 0; }
+    reset(sy, lvl, diff) {
+        const hw = (CONFIG.CHANNEL.WIDTH - (lvl ? lvl.nar : 0)) / 2;
+        const cx = CONFIG.WIDTH / 2;
+        this.x = U.rand(cx - hw + 18, cx + hw - 18);
+        this.wy = sy + U.rand(-20, 20);
+        this.spd = 0; this.ang = 0; this.vx = 0; this.flash = 0;
+        this.tgtX = this.x; this.avDir = 0;
+        const speedVar = diff ? diff.aiSpeedVar : CONFIG.AI.SPEED_VAR;
+        const speedMult = diff ? diff.aiSpeedMult : 1;
+        const boost = lvl ? lvl.aiBoost : 0;
+        this.baseSp = CONFIG.BOAT.MAX_SPEED * (CONFIG.AI.SPEED_BASE + boost) * speedMult * U.rand(1 - speedVar, 1 + speedVar);
+    }
+    update(dt, wm, channel) {
+        this.spd = U.lerp(this.spd, this.baseSp, 0.02 * dt);
+        let near = null, nd = Infinity;
+        for (const o of wm.obs) {
+            const dy = this.wy - o.y;
+            if (dy > 0 && dy < CONFIG.AI.LOOK_AHEAD) {
+                if (Math.abs(this.x - (o.x + o.w/2)) < o.w/2 + this.w/2 + CONFIG.AI.AVOID_PAD) {
+                    if (dy < nd) { nd = dy; near = o; }
+                }
+            }
+        }
+        if (near) {
+            if (!this.avDir) this.avDir = this.x > near.x + near.w/2 ? 1 : -1;
+            this.tgtX = this.x + this.avDir * CONFIG.AI.LANE_SPEED * dt * 18;
+        } else {
+            this.avDir = 0;
+            if (Math.random() < 0.005) { const s = channel.bounds(this.wy); this.tgtX = U.rand(s.l+18, s.r-18); }
+        }
+        const dx = this.tgtX - this.x;
+        this.x += U.clamp(dx, -CONFIG.AI.LANE_SPEED*dt, CONFIG.AI.LANE_SPEED*dt) * 9;
+        this.ang = U.clamp(dx * 0.008, -0.3, 0.3);
+        this.wy -= this.spd * dt;
+
+        const seg = channel.bounds(this.wy);
+        if (this.x - this.w/2 < seg.l + 4) { this.x = seg.l + this.w/2 + 4; this.avDir = 1; }
+        if (this.x + this.w/2 > seg.r - 4) { this.x = seg.r - this.w/2 - 4; this.avDir = -1; }
+        if (this.flash > 0) this.flash -= dt * 16.67;
+    }
+    onHit(obs) {
+        this.spd *= CONFIG.HIT.SPEED_MULT;
+        this.flash = CONFIG.HIT.FLASH_MS;
+        const dx = this.x - (obs.x + obs.w/2);
+        this.x += Math.sign(dx || 1) * CONFIG.HIT.BOUNCE;
+        this.wy += CONFIG.HIT.BOUNCE * 0.4;
+        this.avDir = Math.sign(dx || 1);
+    }
+    draw(ctx, cam) {
+        const sy = cam.toScreen(this.wy);
+        if (sy < -60 || sy > CONFIG.HEIGHT + 60) return;
+        this._drawBoat(ctx, this.x, sy);
+    }
+}
+
+// ============================================================
+// SECTION 11: HUD
+// ============================================================
+class HUD {
+    constructor() { this.msg = ''; this.msgT = 0; }
+    show(m, dur) { this.msg = m; this.msgT = dur || 2000; }
+    tick(dt) { if (this.msgT > 0) this.msgT -= dt * 16.67; }
+
+    drawRace(ctx, lv, tot, rank, total, spd, lives, diffLabel) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, 52);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('⛵ ' + lv + '/' + tot + '关', 10, 16);
+        ctx.fillText('🏅 第' + rank + '/' + total + '名', 10, 38);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffd700'; ctx.font = 'bold 12px sans-serif';
+        ctx.fillText('[' + diffLabel + ']', CONFIG.WIDTH/2, 16);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(Math.abs(Math.round(spd * 30)) + ' km/h', CONFIG.WIDTH/2, 38);
+        ctx.textAlign = 'right';
+        let lifeStr = '';
+        for (let i = 0; i < CONFIG.LIVES; i++) lifeStr += i < lives ? '❤️' : '🖤';
+        ctx.font = '14px sans-serif';
+        ctx.fillText(lifeStr, CONFIG.WIDTH - 50, 18);
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillText('前3名晋级', CONFIG.WIDTH - 50, 42);
+        ctx.restore();
+        this._drawMsg(ctx);
+    }
+
+    drawTrain(ctx, dist, spd, time) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, 36);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('⛵ ' + Math.floor(dist) + ' m', 10, 24);
+        ctx.textAlign = 'center';
+        const m = Math.floor(time / 60), s = Math.floor(time % 60);
+        ctx.fillText((m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s, CONFIG.WIDTH/2, 24);
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.abs(Math.round(spd * 30)) + ' km/h', CONFIG.WIDTH - 50, 24);
+        ctx.restore();
+        this._drawMsg(ctx);
+    }
+
+    _drawMsg(ctx) {
+        if (this.msgT <= 0) return;
+        const a = Math.min(1, this.msgT / 300);
+        ctx.save(); ctx.globalAlpha = a;
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(CONFIG.WIDTH/2 - 140, CONFIG.HEIGHT/2 - 50, 280, 100);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(this.msg, CONFIG.WIDTH/2, CONFIG.HEIGHT/2);
+        ctx.restore();
+    }
+}
+
+// ============================================================
+// SECTION 12: Game - 主控
+// ============================================================
+class Game {
+    constructor() {
+        this.cv = document.getElementById('gameCanvas');
+        this.ctx = this.cv.getContext('2d');
+        this.inp = new InputManager(this.cv);
+        this.cam = new Camera();
+        this.channel = new Channel();
+        this.wm = new WaveManager();
+        this.hud = new HUD();
+        this.player = new PlayerBoat();
+        this.audio = new AudioManager();
+        this.ais = [];
+
+        this.state = 'menu';
+        this.mode = '';
+        this.lv = 0;
+        this.dist = 0;
+        this.trainTime = 0;
+        this.startY = 0;
+        this.cdVal = 3;
+        this.cdTimer = 0;
+        this.lcTimer = 0;
+        this.ranks = [];
+        this.finalRanks = [];
+        this.lastT = 0;
+        this.difficulty = null;
+        this.levels = [];
+
+        this._resize();
+        window.addEventListener('resize', () => this._resize());
+        this.inp.onTap((x, y) => this._tap(x, y));
+        this._loop = this._loop.bind(this);
+        requestAnimationFrame(this._loop);
+    }
+
+    _resize() {
+        const r = CONFIG.WIDTH / CONFIG.HEIGHT;
+        let w = window.innerWidth, h = window.innerHeight;
+        if (w / h > r) w = h * r; else h = w / r;
+        this.cv.width = CONFIG.WIDTH; this.cv.height = CONFIG.HEIGHT;
+        this.cv.style.width = w + 'px'; this.cv.style.height = h + 'px';
+    }
+
+    _initAudio() {
+        this.audio.init();
+        if (this.audio.bgmNodes.length === 0) this.audio.playBGM();
+    }
+
+    _buildLevels(diff) {
+        return CONFIG.LEVELS_BASE.map((b, i) => ({
+            ...b,
+            dens: b.dens * diff.obsDensMult * (1 + i * (diff.growthRate - 1) * 0.07),
+            mov: Math.min(b.mov + diff.obsMovProb * 0.3, 0.8),
+        }));
+    }
+
+    // -- state transitions --
+    _goMenu() { this.state = 'menu'; this.mode = ''; }
+    _goDiffSelect() { this.state = 'diffSelect'; }
+
+    _goRace(lv) {
+        this.mode = 'race'; this.lv = lv;
+        const c = this.levels[lv];
+        this.startY = 0;
+        this.channel.init(-c.len, c.nar);
+        this.channel.generate(0);
+        this.player.reset(0);
+        this.wm.init(0);
+        this.ais = [];
+        for (let i = 0; i < CONFIG.AI.COUNT; i++) {
+            const ai = new AIBoat(i, CONFIG.AI.COLORS[i]);
+            ai.reset(0, c, this.difficulty);
+            this.ais.push(ai);
+        }
+        this._goCountdown();
+    }
+
+    _goTrain() {
+        this.mode = 'training'; this.startY = 0; this.dist = 0; this.trainTime = 0;
+        this.channel.init(-Infinity, 0);
+        this.channel.generate(0);
+        this.player.reset(0);
+        this.player.lives = 999;
+        this.wm.init(0);
+        this.ais = [];
+        this._goCountdown();
+    }
+
+    _goCountdown() { this.state = 'countdown'; this.cdVal = 3; this.cdTimer = 0; }
+    _goPause() { if (this.state === 'playing') { this.state = 'paused'; this.audio.pauseBGM(); } }
+    _goResume() { if (this.state === 'paused') { this.state = 'playing'; this.audio.resumeBGM(); } }
+
+    _goNext() {
+        if (this.lv < this.levels.length - 1) this._goRace(this.lv + 1);
+        else { this.finalRanks = this.ranks.slice(); this.state = 'victory'; this.audio.playSFX('advance'); }
+    }
+
+    // -- tap --
+    _tap(x, y) {
+        this._initAudio();
+        const cx = CONFIG.WIDTH / 2;
+
+        if (this.state === 'menu') {
+            if (x >= CONFIG.WIDTH - 45 && x <= CONFIG.WIDTH - 5 && y >= 5 && y <= 40) {
+                this.audio.toggleMute(); return;
+            }
+            if (x >= cx - 100 && x <= cx + 100) {
+                if (y >= 340 && y <= 395) this._goTrain();
+                if (y >= 415 && y <= 470) this._goDiffSelect();
+            }
+        } else if (this.state === 'diffSelect') {
+            if (x >= cx - 100 && x <= cx + 100) {
+                if (y >= 280 && y <= 335) { this.difficulty = CONFIG.DIFFICULTY.EASY; this.levels = this._buildLevels(this.difficulty); this._goRace(0); }
+                if (y >= 350 && y <= 405) { this.difficulty = CONFIG.DIFFICULTY.HARD; this.levels = this._buildLevels(this.difficulty); this._goRace(0); }
+                if (y >= 420 && y <= 475) { this.difficulty = CONFIG.DIFFICULTY.LEGENDARY; this.levels = this._buildLevels(this.difficulty); this._goRace(0); }
+                if (y >= 510 && y <= 555) this._goMenu();
+            }
+        } else if (this.state === 'paused') {
+            if (x >= cx - 95 && x <= cx + 95) {
+                if (y >= 295 && y <= 345) this._goResume();
+                if (y >= 360 && y <= 410) { this.mode === 'race' ? this._goRace(this.lv) : this._goTrain(); }
+                if (y >= 425 && y <= 475) this._goMenu();
+            }
+        } else if (this.state === 'playing') {
+            if (x >= CONFIG.WIDTH - 45 && x <= CONFIG.WIDTH - 5 && y >= 5 && y <= 40) {
+                this.audio.toggleMute(); return;
+            }
+            if (x >= CONFIG.WIDTH - 48 && y >= 40 && y <= 56) this._goPause();
+            if (this.mode === 'training' && x >= CONFIG.WIDTH - 98 && x <= CONFIG.WIDTH - 8 && y >= 58 && y <= 88) {
+                this.state = 'trainEnd';
+            }
+        } else if (this.state === 'trainEnd') {
+            if (x >= cx - 95 && x <= cx + 95) {
+                if (y >= 360 && y <= 410) this._goTrain();
+                if (y >= 425 && y <= 475) this._goMenu();
+            }
+        } else if (this.state === 'levelFailed' || this.state === 'gameOver') {
+            if (x >= cx - 95 && x <= cx + 95) {
+                if (y >= 380 && y <= 430) this._goRace(this.lv);
+                if (y >= 445 && y <= 495) this._goMenu();
+            }
+        } else if (this.state === 'victory') {
+            if (x >= cx - 95 && x <= cx + 95 && y >= 490 && y <= 540) this._goMenu();
+        }
+    }
+
+    // -- update --
+    _update(dt) {
+        if (this.inp.esc) {
+            this.inp.eatEsc();
+            if (this.state === 'playing') this._goPause();
+            else if (this.state === 'paused') this._goResume();
+        }
+        this.hud.tick(dt);
+
+        if (this.state === 'countdown') {
+            this.cdTimer += dt * 16.67;
+            if (this.cdTimer >= 1000) {
+                this.cdTimer -= 1000;
+                this.cdVal--;
+                if (this.cdVal > 0) this.audio.playSFX('countdown');
+                else if (this.cdVal === 0) this.audio.playSFX('go');
+                if (this.cdVal < 0) this.state = 'playing';
+            }
+        } else if (this.state === 'playing') {
+            this._play(dt);
+        } else if (this.state === 'levelComplete') {
+            this.lcTimer -= dt * 16.67;
+            if (this.lcTimer <= 0) this._goNext();
+        }
+    }
+
+    _play(dt) {
+        this.player.update(dt, this.inp, this.channel);
+        this.cam.follow(this.player.wy);
+        this.channel.generate(this.cam.y);
+
+        if (this.mode === 'race') {
+            const c = this.levels[this.lv];
+            this.wm.generate(this.cam.y, c.dens, c.mov, this.channel);
+        }
+
+        this.wm.update(dt);
+        this.wm.cleanup(this.cam.y + CONFIG.HEIGHT);
+
+        if (this.mode === 'race' && this.player.invTimer <= 0) {
+            const h = this.wm.hit(this.player.box());
+            if (h) {
+                const hit = this.player.onHit(h);
+                if (hit) this.audio.playSFX('hit');
+                if (this.player.isDead()) {
+                    this.state = 'gameOver';
+                    this.audio.playSFX('fail');
+                    return;
+                }
+            }
+        }
+
+        for (const ai of this.ais) {
+            ai.update(dt, this.wm, this.channel);
+            if (ai.flash <= 0) { const h = this.wm.hit(ai.box()); if (h) ai.onHit(h); }
+        }
+
+        if (this.mode === 'race') this._calcRanks();
+
+        if (this.mode === 'training') {
+            this.dist = Math.abs(this.player.wy - this.startY) / 10;
+            this.trainTime += dt * 16.67 / 1000;
+        }
+
+        if (this.mode === 'race') {
+            const c = this.levels[this.lv];
+            if (this.player.wy <= -c.len) {
+                const rank = this._pRank();
+                if (rank <= CONFIG.QUALIFY_RANK) {
+                    this.state = 'levelComplete';
+                    this.lcTimer = 2500;
+                    this.hud.show(c.name + '完成！第' + rank + '名 ✓', 2500);
+                    this.audio.playSFX('advance');
+                } else {
+                    this.state = 'levelFailed';
+                    this.audio.playSFX('fail');
+                }
+            }
+        }
+    }
+
+    _calcRanks() {
+        const all = [{ c: this.player, p: true }];
+        for (const a of this.ais) all.push({ c: a, p: false });
+        all.sort((a, b) => a.c.wy - b.c.wy);
+        this.ranks = all;
+    }
+    _pRank() { for (let i = 0; i < this.ranks.length; i++) if (this.ranks[i].p) return i + 1; return this.ranks.length; }
+
+    // -- draw --
+    _draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+
+        switch (this.state) {
+            case 'menu': this._drawMenu(ctx); break;
+            case 'diffSelect': this._drawDiffSelect(ctx); break;
+            case 'countdown': this._drawGame(ctx); this._drawCD(ctx); break;
+            case 'playing': this._drawGame(ctx); this._drawHUD(ctx); break;
+            case 'paused': this._drawGame(ctx); this._drawPause(ctx); break;
+            case 'levelComplete': this._drawGame(ctx); this.hud._drawMsg(ctx); break;
+            case 'levelFailed': this._drawLevelFailed(ctx); break;
+            case 'gameOver': this._drawGameOver(ctx); break;
+            case 'victory': this._drawVictory(ctx); break;
+            case 'trainEnd': this._drawTrainEnd(ctx); break;
+        }
+    }
+
+    _drawGame(ctx) {
+        this.channel.draw(ctx, this.cam, 1);
+        this.wm.draw(ctx, this.cam);
+        for (const a of this.ais) a.draw(ctx, this.cam);
+        this.player.draw(ctx, this.cam);
+        this.inp.drawTouch(ctx);
+    }
+
+    _drawHUD(ctx) {
+        if (this.mode === 'race') {
+            this.hud.drawRace(ctx, this.lv+1, this.levels.length, this._pRank(), CONFIG.AI.COUNT+1, this.player.spd, this.player.lives, this.difficulty.label);
+        } else {
+            this.hud.drawTrain(ctx, this.dist, this.player.spd, this.trainTime);
+            ctx.save(); ctx.globalAlpha = 0.7;
+            ctx.fillStyle = '#c0392b';
+            this._rrect(ctx, CONFIG.WIDTH-98, 58, 88, 28, 6); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('结束训练', CONFIG.WIDTH-54, 72);
+            ctx.globalAlpha = 1; ctx.restore();
+        }
+        // pause icon
+        ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#fff';
+        ctx.fillRect(CONFIG.WIDTH - 38, 44, 7, 14);
+        ctx.fillRect(CONFIG.WIDTH - 26, 44, 7, 14);
+        ctx.globalAlpha = 1; ctx.restore();
+        // mute btn
+        this._drawMuteBtn(ctx);
+        this.hud._drawMsg(ctx);
+    }
+
+    _drawMuteBtn(ctx) {
+        ctx.save(); ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#333';
+        this._rrect(ctx, CONFIG.WIDTH - 42, 8, 34, 28, 6); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(this.audio.muted ? '🔇' : '🔊', CONFIG.WIDTH - 25, 22);
+        ctx.globalAlpha = 1; ctx.restore();
+    }
+
+    _drawMenu(ctx) {
+        ctx.fillStyle = '#0a2a4a';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+        ctx.fillStyle = CONFIG.CHANNEL.WATER_COLOR;
+        ctx.fillRect(50, 0, 300, CONFIG.HEIGHT);
+        ctx.fillStyle = CONFIG.CHANNEL.BORDER_COLOR;
+        ctx.fillRect(47, 0, 3, CONFIG.HEIGHT);
+        ctx.fillRect(350, 0, 3, CONFIG.HEIGHT);
+        for (let y = 0; y < CONFIG.HEIGHT; y += 50) {
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            ctx.fillRect(180, y, 40, 4);
+        }
+        ctx.fillStyle = '#4fc3f7';
+        ctx.font = 'bold 42px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('⛵ 帆船冲刺', CONFIG.WIDTH/2, 160);
+        ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '13px sans-serif';
+        ctx.fillText('方向键 / WASD 操控 · 手机触控操作', CONFIG.WIDTH/2, 230);
+        ctx.fillText('ESC 暂停', CONFIG.WIDTH/2, 250);
+        this._btn(ctx, CONFIG.WIDTH/2, 365, '🏋️ 训练模式', '#27ae60');
+        this._btn(ctx, CONFIG.WIDTH/2, 440, '🏆 比赛模式', '#2980b9');
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '12px sans-serif';
+        ctx.fillText('训练：自由练习 · 无障碍 · 无终点', CONFIG.WIDTH/2, 510);
+        ctx.fillText('比赛：21人竞技 · 14关闯关 · 前3名晋级', CONFIG.WIDTH/2, 530);
+        this._drawMuteBtn(ctx);
+    }
+
+    _drawDiffSelect(ctx) {
+        ctx.fillStyle = '#0a2a4a';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+        ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 30px sans-serif';
+        ctx.textAlign = 'center'; ctx.fillText('选择难度', CONFIG.WIDTH/2, 120);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif';
+        ctx.fillText('难度越高，AI越强，海浪越多', CONFIG.WIDTH/2, 170);
+        ctx.fillText('只有前3名才能晋级下一关！', CONFIG.WIDTH/2, 195);
+        this._btn(ctx, CONFIG.WIDTH/2, 305, '🟢 简单', '#27ae60');
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '11px sans-serif';
+        ctx.fillText('AI较慢 · 障碍物少 · 适合新手', CONFIG.WIDTH/2, 336);
+        this._btn(ctx, CONFIG.WIDTH/2, 375, '🟠 困难', '#e67e22');
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '11px sans-serif';
+        ctx.fillText('AI正常速度 · 障碍物适中', CONFIG.WIDTH/2, 406);
+        this._btn(ctx, CONFIG.WIDTH/2, 445, '🔴 传奇', '#c0392b');
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '11px sans-serif';
+        ctx.fillText('AI极快 · 障碍物密集 · 终极挑战', CONFIG.WIDTH/2, 476);
+        this._btn(ctx, CONFIG.WIDTH/2, 530, '← 返回', '#555');
+    }
+
+    _drawCD(ctx) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 68px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(this.cdVal > 0 ? this.cdVal : 'GO!', CONFIG.WIDTH/2, CONFIG.HEIGHT/2);
+        if (this.mode === 'race') {
+            ctx.font = 'bold 20px sans-serif';
+            ctx.fillText(this.levels[this.lv].name + ' [' + this.difficulty.label + ']', CONFIG.WIDTH/2, CONFIG.HEIGHT/2 - 70);
+        } else {
+            ctx.font = 'bold 20px sans-serif';
+            ctx.fillText('训练模式', CONFIG.WIDTH/2, CONFIG.HEIGHT/2 - 70);
+        }
+        ctx.restore();
+    }
+
+    _drawPause(ctx) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 28px sans-serif';
+        ctx.textAlign = 'center'; ctx.fillText('暂停', CONFIG.WIDTH/2, 240);
+        this._btn(ctx, CONFIG.WIDTH/2, 320, '▶ 继续游戏', '#27ae60');
+        this._btn(ctx, CONFIG.WIDTH/2, 385, '🔄 重新开始', '#f39c12');
+        this._btn(ctx, CONFIG.WIDTH/2, 450, '🏠 返回菜单', '#c0392b');
+        ctx.restore();
+    }
+
+    _drawLevelFailed(ctx) {
+        ctx.fillStyle = '#0a2a4a';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+        ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 30px sans-serif';
+        ctx.textAlign = 'center'; ctx.fillText('未能晋级', CONFIG.WIDTH/2, 160);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif';
+        ctx.fillText(this.levels[this.lv].name + ' · 第' + this._pRank() + '名', CONFIG.WIDTH/2, 220);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '15px sans-serif';
+        ctx.fillText('需要前3名才能晋级', CONFIG.WIDTH/2, 260);
+        ctx.fillText('你的排名：第 ' + this._pRank() + ' / ' + (CONFIG.AI.COUNT + 1) + ' 名', CONFIG.WIDTH/2, 290);
+        this._btn(ctx, CONFIG.WIDTH/2, 405, '🔄 重试本关', '#f39c12');
+        this._btn(ctx, CONFIG.WIDTH/2, 470, '🏠 返回菜单', '#c0392b');
+    }
+
+    _drawGameOver(ctx) {
+        ctx.fillStyle = '#0a2a4a';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+        ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 32px sans-serif';
+        ctx.textAlign = 'center'; ctx.fillText('💀 游戏结束', CONFIG.WIDTH/2, 160);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('生命值耗尽', CONFIG.WIDTH/2, 220);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '15px sans-serif';
+        ctx.fillText(this.levels[this.lv].name + ' · ' + this.difficulty.label + '难度', CONFIG.WIDTH/2, 260);
+        ctx.fillText('排名：第 ' + this._pRank() + ' / ' + (CONFIG.AI.COUNT + 1) + ' 名', CONFIG.WIDTH/2, 290);
+        this._btn(ctx, CONFIG.WIDTH/2, 405, '🔄 重试本关', '#f39c12');
+        this._btn(ctx, CONFIG.WIDTH/2, 470, '🏠 返回菜单', '#c0392b');
+    }
+
+    _drawVictory(ctx) {
+        ctx.fillStyle = '#0a2a4a';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+        ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 34px sans-serif';
+        ctx.textAlign = 'center'; ctx.fillText('🏆 通关成功！', CONFIG.WIDTH/2, 80);
+        ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 18px sans-serif';
+        ctx.fillText('14关全部完成 · ' + this.difficulty.label + '难度', CONFIG.WIDTH/2, 130);
+        const r = this._pRank();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif';
+        ctx.fillText('最终排名：第 ' + r + ' 名', CONFIG.WIDTH/2, 180);
+        ctx.font = '14px sans-serif';
+        const list = this.finalRanks.length ? this.finalRanks : this.ranks;
+        for (let i = 0; i < Math.min(10, list.length); i++) {
+            const e = list[i];
+            ctx.fillStyle = e.p ? '#e74c3c' : e.c.color;
+            const lb = e.p ? '👤 你' : '🤖 AI-' + (e.c.idx + 1);
+            ctx.fillText((i+1) + '. ' + lb, CONFIG.WIDTH/2, 220 + i * 22);
+        }
+        this._btn(ctx, CONFIG.WIDTH/2, 510, '🏠 返回菜单', '#2980b9');
+    }
+
+    _drawTrainEnd(ctx) {
+        ctx.fillStyle = '#0a2a4a';
+        ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
+        ctx.fillStyle = '#f1c40f'; ctx.font = 'bold 30px sans-serif';
+        ctx.textAlign = 'center'; ctx.fillText('训练结束', CONFIG.WIDTH/2, 200);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif';
+        ctx.fillText('航行距离：' + Math.floor(this.dist) + ' m', CONFIG.WIDTH/2, 270);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '15px sans-serif';
+        const m = Math.floor(this.trainTime / 60), s = Math.floor(this.trainTime % 60);
+        ctx.fillText('用时：' + (m<10?'0':'') + m + ':' + (s<10?'0':'') + s, CONFIG.WIDTH/2, 310);
+        ctx.fillText('最终速度：' + Math.abs(Math.round(this.player.spd * 30)) + ' km/h', CONFIG.WIDTH/2, 340);
+        this._btn(ctx, CONFIG.WIDTH/2, 385, '🔄 再次训练', '#27ae60');
+        this._btn(ctx, CONFIG.WIDTH/2, 450, '🏠 返回菜单', '#c0392b');
+    }
+
+    _btn(ctx, cx, cy, txt, col) {
+        const bw = 190, bh = 48;
+        ctx.fillStyle = col;
+        this._rrect(ctx, cx - bw/2, cy - bh/2, bw, bh, 10);
+        ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 17px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(txt, cx, cy);
+    }
+    _rrect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+        ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+        ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+        ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+        ctx.closePath();
+    }
+
+    // -- loop --
+    _loop(now) {
+        if (!this.lastT) this.lastT = now;
+        let el = now - this.lastT;
+        this.lastT = now;
+        if (el > CONFIG.DT_MAX) el = CONFIG.DT_MAX;
+        const dt = el / 16.67;
+        this._update(dt);
+        this._draw();
+        requestAnimationFrame(this._loop);
+    }
+}
+
+// ============================================================
+// SECTION 13: 启动入口
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+    new Game();
+});
+</script>
+</body>
+</html>
