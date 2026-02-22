@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我是班长</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #classroom {
+            position: relative;
+            width: 95vw;
+            height: 90vh;
+            background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+            border-radius: 20px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        /* 黑板 */
+        #blackboard {
+            position: absolute;
+            top: 3%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 18%;
+            background: linear-gradient(180deg, #2d5a27 0%, #1e3d1a 100%);
+            border-radius: 8px;
+            border: 8px solid #8b4513;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .blackboard-text {
+            color: rgba(255,255,255,0.9);
+            font-size: clamp(14px, 2.5vw, 24px);
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* 课桌区域 */
+        #desks {
+            position: absolute;
+            top: 25%;
+            left: 3%;
+            width: 94%;
+            height: 70%;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 6px;
+        }
+
+        .desk {
+            background: linear-gradient(180deg, #d4a574 0%, #c4956a 100%);
+            border-radius: 6px;
+            border: 2px solid #8b6914;
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.15);
+        }
+
+        /* 学生网格 */
+        #students {
+            position: absolute;
+            top: 25%;
+            left: 3%;
+            width: 94%;
+            height: 70%;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .student {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            cursor: default;
+            padding-bottom: 4px;
+        }
+
+        .student-body {
+            width: clamp(24px, 4.5vw, 40px);
+            height: clamp(28px, 5vw, 48px);
+            border-radius: 50% 50% 45% 45%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(10px, 1.8vw, 14px);
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            flex-shrink: 0;
+        }
+
+        /* 泡泡 */
+        .bubble {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(16px, 3.2vw, 28px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            border: 2px solid #ddd;
+            width: clamp(30px, 5vw, 44px);
+            height: clamp(30px, 5vw, 44px);
+            cursor: pointer;
+            z-index: 20;
+            animation: bubbleAppear 0.4s ease-out, bubbleFloat 2s ease-in-out 0.4s infinite;
+        }
+
+        .bubble:hover {
+            transform: translateX(-50%) scale(1.15);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        /* 泡泡倒计时环 */
+        .bubble-timer {
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            width: calc(100% + 6px);
+            height: calc(100% + 6px);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .bubble-timer circle {
+            fill: none;
+            stroke: #e74c3c;
+            stroke-width: 3;
+            stroke-dasharray: 126;
+            stroke-dashoffset: 0;
+            transform: rotate(-90deg);
+            transform-origin: center;
+            transition: stroke-dashoffset 0.5s linear;
+        }
+
+        @keyframes bubbleAppear {
+            0% { transform: translateX(-50%) scale(0); opacity: 0; }
+            60% { transform: translateX(-50%) scale(1.2); opacity: 1; }
+            100% { transform: translateX(-50%) scale(1); opacity: 1; }
+        }
+
+        @keyframes bubbleFloat {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-4px); }
+        }
+
+        @keyframes bubbleExpire {
+            0% { transform: translateX(-50%) scale(1); opacity: 1; }
+            100% { transform: translateX(-50%) scale(0); opacity: 0; }
+        }
+
+        .bubble.expiring {
+            animation: bubbleExpire 0.4s ease-in forwards;
+        }
+
+        /* 回应气泡 */
+        .response-bubble {
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fffde7;
+            border: 2px solid #ffd54f;
+            border-radius: 12px;
+            padding: 4px 8px;
+            font-size: clamp(10px, 1.8vw, 13px);
+            white-space: nowrap;
+            z-index: 30;
+            pointer-events: none;
+            animation: responseShow 1.5s ease forwards;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .response-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 6px solid #ffd54f;
+        }
+
+        @keyframes responseShow {
+            0% { opacity: 0; transform: translateX(-50%) translateY(5px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            75% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+        }
+
+        /* 状态颜色 */
+        .status-gaming { border-color: #9b59b6 !important; box-shadow: 0 3px 10px rgba(155,89,182,0.3) !important; }
+        .status-toilet { border-color: #3498db !important; box-shadow: 0 3px 10px rgba(52,152,219,0.3) !important; }
+        .status-fighting { border-color: #e74c3c !important; box-shadow: 0 3px 10px rgba(231,76,60,0.3) !important; }
+        .status-talking { border-color: #1abc9c !important; box-shadow: 0 3px 10px rgba(26,188,156,0.3) !important; }
+        .status-snack { border-color: #f39c12 !important; box-shadow: 0 3px 10px rgba(243,156,18,0.3) !important; }
+
+        /* UI面板 */
+        #ui {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .ui-box {
+            background: rgba(255,255,255,0.95);
+            padding: 8px 14px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-size: clamp(12px, 2.2vw, 18px);
+            font-weight: bold;
+        }
+
+        #timer { color: #e74c3c; }
+        #score { color: #27ae60; }
+        #target { color: #9b59b6; }
+
+        /* 选择弹窗 */
+        #choiceModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #choiceModal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 90%;
+            min-width: 280px;
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-title {
+            font-size: clamp(18px, 4vw, 24px);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .modal-subtitle {
+            font-size: clamp(12px, 2.5vw, 15px);
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            padding: 14px 18px;
+            margin: 8px 0;
+            font-size: clamp(13px, 2.8vw, 17px);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .choice-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .choice-btn:active {
+            transform: scale(0.98);
+        }
+
+        .choice-positive {
+            background: linear-gradient(180deg, #27ae60 0%, #1e8449 100%);
+            color: white;
+        }
+
+        .choice-negative {
+            background: linear-gradient(180deg, #e67e22 0%, #d35400 100%);
+            color: white;
+        }
+
+        .choice-neutral {
+            background: linear-gradient(180deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+        }
+
+        .points-tag {
+            font-size: 0.75em;
+            opacity: 0.9;
+            margin-left: 6px;
+        }
+
+        /* 开始/结束界面 */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: white;
+        }
+
+        #overlay.hidden {
+            display: none;
+        }
+
+        #overlay h1 {
+            font-size: clamp(32px, 8vw, 60px);
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(255,215,0,0.5);
+        }
+
+        #overlay .subtitle {
+            font-size: clamp(16px, 4vw, 24px);
+            margin-bottom: 30px;
+            color: #ccc;
+        }
+
+        #overlay .info {
+            font-size: clamp(13px, 2.8vw, 17px);
+            margin-bottom: 25px;
+            max-width: 85%;
+            line-height: 2;
+            text-align: center;
+            color: #bbb;
+        }
+
+        .start-btn {
+            padding: 18px 60px;
+            font-size: clamp(18px, 4vw, 24px);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+            color: #333;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(255,215,0,0.4);
+        }
+
+        .start-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(255,215,0,0.6);
+        }
+
+        .start-btn:active {
+            transform: scale(0.95);
+        }
+
+        .result-icon {
+            font-size: clamp(60px, 15vw, 100px);
+            margin-bottom: 20px;
+        }
+
+        .result-title {
+            font-size: clamp(20px, 5vw, 36px);
+            margin-bottom: 15px;
+            line-height: 1.5;
+            max-width: 85%;
+            text-align: center;
+        }
+
+        .result-score {
+            font-size: clamp(18px, 4vw, 28px);
+            margin-bottom: 30px;
+        }
+
+        .win { color: #2ecc71; }
+        .lose { color: #e74c3c; }
+
+        /* 状态图例 */
+        #legend {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .legend-item {
+            background: rgba(255,255,255,0.9);
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: clamp(9px, 1.8vw, 13px);
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .legend-icon {
+            font-size: clamp(12px, 2.2vw, 16px);
+        }
+
+        /* 飘分效果 */
+        .float-score {
+            position: absolute;
+            font-size: clamp(16px, 3vw, 24px);
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+            z-index: 500;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-40px); }
+        }
+
+        /* 分数动画 */
+        @keyframes scoreAdd {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        .score-animate {
+            animation: scoreAdd 0.4s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="classroom">
+            <!-- 黑板 -->
+            <div id="blackboard">
+                <div class="blackboard-text">🖍️ 老师不在，班长负责！</div>
+            </div>
+
+            <!-- 课桌 -->
+            <div id="desks"></div>
+
+            <!-- 学生容器 -->
+            <div id="students"></div>
+
+            <!-- UI -->
+            <div id="ui">
+                <div class="ui-box" id="timer">⏱️ 300秒</div>
+                <div class="ui-box" id="target">🎯 目标: 60分</div>
+                <div class="ui-box" id="score">⭐ 0分</div>
+            </div>
+
+            <!-- 状态图例 -->
+            <div id="legend">
+                <div class="legend-item"><span class="legend-icon">🎮</span>玩游戏</div>
+                <div class="legend-item"><span class="legend-icon">🚽</span>上厕所</div>
+                <div class="legend-item"><span class="legend-icon">👊</span>打架</div>
+                <div class="legend-item"><span class="legend-icon">💬</span>说话</div>
+                <div class="legend-item"><span class="legend-icon">🍪</span>吃零食</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 选择弹窗 -->
+    <div id="choiceModal">
+        <div class="modal-content">
+            <div class="modal-title">
+                <span id="modalIcon">🎮</span>
+                <span id="modalStatus">玩游戏</span>
+            </div>
+            <div class="modal-subtitle" id="modalSubtitle">这位同学正在玩游戏</div>
+            <div id="modalChoices"></div>
+        </div>
+    </div>
+
+    <!-- 开始/结束界面 -->
+    <div id="overlay">
+        <div id="startScreen">
+            <h1>🏫 我是班长</h1>
+            <div class="subtitle">老师出去了，你来管班级！</div>
+            <div class="info">
+                你是班长，负责管理40名同学的纪律<br>
+                同学们会搞各种小动作，点击头顶的泡泡处理<br>
+                泡泡不处理会自动消失并扣分哦！<br>
+                300秒内集齐 <strong>60分</strong>，老师回来时你就是合格班长！
+            </div>
+            <button class="start-btn" onclick="startGame()">📢 开始管班</button>
+        </div>
+
+        <div id="gameOverScreen" class="hidden">
+            <div class="result-icon" id="resultIcon">🏆</div>
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-score" id="resultScore"></div>
+            <button class="start-btn" onclick="startGame()">🔄 再来一次</button>
+        </div>
+    </div>
+
+    <script>
+        'use strict';
+
+        // ============ 游戏配置 ============
+        const CONFIG = {
+            totalStudents: 40,
+            gameTime: 300,
+            targetScore: 60,
+            deskRows: 5,
+            deskCols: 8,
+            maxBubbles: 6,
+            bubbleLifetime: 8000,
+            baseSpawnInterval: 4000,
+            minSpawnInterval: 1500,
+            expirePenalty: -1,
+        };
+
+        // ============ 事件定义 ============
+        const EVENTS = [
+            {
+                id: 'gaming', icon: '🎮', name: '玩游戏',
+                choices: [
+                    { text: '你不要再玩了', points: 3, type: 'positive', response: '好吧...收起来了😔' },
+                    { text: '我也要玩', points: 1, type: 'negative', response: '来来来一起！🎮' },
+                    { text: '不解决', points: 0, type: 'neutral', response: '嘿嘿继续玩~😝' },
+                ]
+            },
+            {
+                id: 'toilet', icon: '🚽', name: '上厕所',
+                choices: [
+                    { text: '去吧', points: 3, type: 'positive', response: '谢谢班长！🏃' },
+                    { text: '憋着', points: 1, type: 'negative', response: '呜呜...好难受😣' },
+                    { text: '你这么一说我也想尿了', points: 0, type: 'neutral', response: '哈哈哈哈哈😂' },
+                ]
+            },
+            {
+                id: 'fighting', icon: '👊', name: '打架',
+                choices: [
+                    { text: '别打了', points: 3, type: 'positive', response: '好吧不打了...🤝' },
+                    { text: '打他', points: 1, type: 'negative', response: '班长帮我！💪' },
+                    { text: '我也来了', points: -1, type: 'neutral', response: '三个人打！😈' },
+                ]
+            },
+            {
+                id: 'talking', icon: '💬', name: '说话',
+                choices: [
+                    { text: '不要再说了', points: 3, type: 'positive', response: '好的好的...🤐' },
+                    { text: '说啥呢，我听听', points: 1, type: 'negative', response: '哈哈跟你说哦...🗣️' },
+                    { text: '不管', points: 0, type: 'neutral', response: '继续聊继续聊~💬' },
+                ]
+            },
+            {
+                id: 'snack', icon: '🍪', name: '吃零食',
+                choices: [
+                    { text: '不要吃了', points: 3, type: 'positive', response: '好吧收起来了😢' },
+                    { text: '吃什么呢，我也要吃', points: 1, type: 'negative', response: '给你一块！🍪' },
+                    { text: '直接把零食扔掉', points: 0, type: 'neutral', response: '啊！我的零食！😭' },
+                ]
+            }
+        ];
+
+        // ============ 游戏状态 ============
+        let gameState = {
+            running: false,
+            timeLeft: CONFIG.gameTime,
+            score: 0,
+            students: [],          // { id, color }
+            activeBubbles: [],     // { studentId, event, timerId, spawnTime }
+            timerInterval: null,
+            spawnTimeout: null,
+        };
+
+        // ============ DOM 引用 ============
+        const classroom = document.getElementById('classroom');
+        const studentsContainer = document.getElementById('students');
+        const timerEl = document.getElementById('timer');
+        const scoreEl = document.getElementById('score');
+        const choiceModal = document.getElementById('choiceModal');
+        const overlay = document.getElementById('overlay');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+
+        // ============ 初始化课桌 ============
+        function initDesks() {
+            const desksContainer = document.getElementById('desks');
+            desksContainer.innerHTML = '';
+            for (let i = 0; i < CONFIG.deskRows * CONFIG.deskCols; i++) {
+                const desk = document.createElement('div');
+                desk.className = 'desk';
+                desksContainer.appendChild(desk);
+            }
+        }
+
+        // ============ 学生颜色 ============
+        const BODY_COLORS = [
+            '#e74c3c', '#3498db', '#2ecc71', '#9b59b6',
+            '#f39c12', '#1abc9c', '#e67e22', '#34495e'
+        ];
+
+        function getRandomBodyColor() {
+            return BODY_COLORS[Math.floor(Math.random() * BODY_COLORS.length)];
+        }
+
+        // ============ 初始化学生（无泡泡） ============
+        function initStudents() {
+            studentsContainer.innerHTML = '';
+            gameState.students = [];
+            gameState.activeBubbles = [];
+
+            for (let i = 0; i < CONFIG.totalStudents; i++) {
+                const student = { id: i, color: getRandomBodyColor() };
+                gameState.students.push(student);
+
+                const el = document.createElement('div');
+                el.className = 'student';
+                el.id = `student-${i}`;
+
+                const body = document.createElement('div');
+                body.className = 'student-body';
+                body.style.background = student.color;
+                body.textContent = i + 1;
+
+                el.appendChild(body);
+                studentsContainer.appendChild(el);
+            }
+        }
+
+        // ============ 泡泡管理器 ============
+        const BubbleManager = {
+            // 根据游戏进度计算当前生成间隔
+            getCurrentInterval() {
+                const elapsed = CONFIG.gameTime - gameState.timeLeft;
+                const progress = elapsed / CONFIG.gameTime;
+                return CONFIG.baseSpawnInterval - (CONFIG.baseSpawnInterval - CONFIG.minSpawnInterval) * progress;
+            },
+
+            // 获取没有泡泡的学生ID列表
+            getAvailableStudents() {
+                const busyIds = new Set(gameState.activeBubbles.map(b => b.studentId));
+                return gameState.students.filter(s => !busyIds.has(s.id)).map(s => s.id);
+            },
+
+            // 生成泡泡
+            spawnBubble() {
+                if (!gameState.running) return;
+                if (gameState.activeBubbles.length >= CONFIG.maxBubbles) {
+                    this.scheduleNext();
+                    return;
+                }
+
+                const available = this.getAvailableStudents();
+                if (available.length === 0) {
+                    this.scheduleNext();
+                    return;
+                }
+
+                const studentId = available[Math.floor(Math.random() * available.length)];
+                const event = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+
+                this.addBubble(studentId, event);
+                this.scheduleNext();
+            },
+
+            // 添加泡泡到学生头上
+            addBubble(studentId, event) {
+                const el = document.getElementById(`student-${studentId}`);
+                if (!el) return;
+
+                const bubble = document.createElement('div');
+                bubble.className = `bubble status-${event.id}`;
+                bubble.innerHTML = event.icon;
+                bubble.id = `bubble-${studentId}`;
+                bubble.onclick = (e) => {
+                    e.stopPropagation();
+                    showChoices(studentId, event);
+                };
+
+                el.insertBefore(bubble, el.firstChild);
+
+                // 超时自动消失
+                const timerId = setTimeout(() => {
+                    this.expireBubble(studentId);
+                }, CONFIG.bubbleLifetime);
+
+                gameState.activeBubbles.push({
+                    studentId,
+                    event,
+                    timerId,
+                    spawnTime: Date.now(),
+                });
+            },
+
+            // 泡泡超时消失
+            expireBubble(studentId) {
+                const bubble = document.getElementById(`bubble-${studentId}`);
+                if (bubble) {
+                    bubble.classList.add('expiring');
+                    setTimeout(() => bubble.remove(), 400);
+                }
+
+                // 扣分
+                addScore(CONFIG.expirePenalty, studentId);
+
+                // 从活跃列表移除
+                gameState.activeBubbles = gameState.activeBubbles.filter(b => b.studentId !== studentId);
+            },
+
+            // 主动移除泡泡（玩家点击处理后）
+            removeBubble(studentId) {
+                const entry = gameState.activeBubbles.find(b => b.studentId === studentId);
+                if (entry) {
+                    clearTimeout(entry.timerId);
+                    gameState.activeBubbles = gameState.activeBubbles.filter(b => b.studentId !== studentId);
+                }
+
+                const bubble = document.getElementById(`bubble-${studentId}`);
+                if (bubble) bubble.remove();
+            },
+
+            // 调度下一个泡泡
+            scheduleNext() {
+                if (!gameState.running) return;
+                const interval = this.getCurrentInterval();
+                const jitter = (Math.random() - 0.5) * interval * 0.4;
+                gameState.spawnTimeout = setTimeout(() => this.spawnBubble(), interval + jitter);
+            },
+
+            // 开始生成
+            start() {
+                // 先立即生成一个，稍后再按节奏生成
+                setTimeout(() => this.spawnBubble(), 1000);
+            },
+
+            // 停止
+            stop() {
+                if (gameState.spawnTimeout) {
+                    clearTimeout(gameState.spawnTimeout);
+                    gameState.spawnTimeout = null;
+                }
+                // 清除所有泡泡的超时计时器
+                gameState.activeBubbles.forEach(b => clearTimeout(b.timerId));
+            }
+        };
+
+        // ============ 显示选项弹窗 ============
+        let currentChoiceStudentId = null;
+        let currentChoiceEvent = null;
+
+        function showChoices(studentId, event) {
+            if (!gameState.running) return;
+
+            currentChoiceStudentId = studentId;
+            currentChoiceEvent = event;
+
+            document.getElementById('modalIcon').textContent = event.icon;
+            document.getElementById('modalStatus').textContent = event.name;
+            document.getElementById('modalSubtitle').textContent = `${studentId + 1}号同学正在${event.name}`;
+
+            const choicesContainer = document.getElementById('modalChoices');
+            choicesContainer.innerHTML = '';
+
+            event.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = `choice-btn choice-${choice.type}`;
+                const pointsText = choice.points > 0 ? `+${choice.points}` : `${choice.points}`;
+                btn.innerHTML = `${choice.text}<span class="points-tag">(${pointsText}分)</span>`;
+                btn.onclick = () => handleChoice(studentId, event, choice);
+                choicesContainer.appendChild(btn);
+            });
+
+            choiceModal.classList.add('show');
+        }
+
+        // ============ 处理选择 ============
+        function handleChoice(studentId, event, choice) {
+            choiceModal.classList.remove('show');
+
+            // 移除泡泡
+            BubbleManager.removeBubble(studentId);
+
+            // 加分
+            addScore(choice.points, studentId);
+
+            // 显示回应
+            showResponse(studentId, choice.response);
+
+            currentChoiceStudentId = null;
+            currentChoiceEvent = null;
+        }
+
+        // ============ 积分系统 ============
+        function addScore(points, studentId) {
+            gameState.score += points;
+
+            // 更新显示
+            scoreEl.textContent = `⭐ ${gameState.score}分`;
+            scoreEl.classList.remove('score-animate');
+            void scoreEl.offsetWidth;
+            scoreEl.classList.add('score-animate');
+
+            // 飘分效果
+            showFloatScore(points, studentId);
+        }
+
+        function showFloatScore(points, studentId) {
+            if (points === 0) return;
+
+            const studentEl = document.getElementById(`student-${studentId}`);
+            if (!studentEl) return;
+
+            const rect = studentEl.getBoundingClientRect();
+            const classroomRect = classroom.getBoundingClientRect();
+
+            const float = document.createElement('div');
+            float.className = 'float-score';
+            float.textContent = points > 0 ? `+${points}` : `${points}`;
+            float.style.color = points > 0 ? '#2ecc71' : '#e74c3c';
+            float.style.left = `${rect.left - classroomRect.left + rect.width / 2}px`;
+            float.style.top = `${rect.top - classroomRect.top}px`;
+            classroom.appendChild(float);
+
+            setTimeout(() => float.remove(), 1000);
+        }
+
+        // ============ 显示学生回应 ============
+        function showResponse(studentId, text) {
+            const studentEl = document.getElementById(`student-${studentId}`);
+            if (!studentEl) return;
+
+            // 清除已有回应
+            const existing = studentEl.querySelector('.response-bubble');
+            if (existing) existing.remove();
+
+            const responseBubble = document.createElement('div');
+            responseBubble.className = 'response-bubble';
+            responseBubble.textContent = text;
+            studentEl.insertBefore(responseBubble, studentEl.firstChild);
+
+            setTimeout(() => responseBubble.remove(), 1500);
+        }
+
+        // ============ 游戏控制 ============
+        function startGame() {
+            // 清理旧状态
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            BubbleManager.stop();
+
+            gameState.running = true;
+            gameState.timeLeft = CONFIG.gameTime;
+            gameState.score = 0;
+            gameState.activeBubbles = [];
+
+            overlay.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            gameOverScreen.classList.add('hidden');
+
+            // 初始化
+            initDesks();
+            initStudents();
+
+            // 更新UI
+            scoreEl.textContent = '⭐ 0分';
+            timerEl.textContent = `⏱️ ${CONFIG.gameTime}秒`;
+
+            // 开始倒计时
+            gameState.timerInterval = setInterval(() => {
+                if (!gameState.running) return;
+                gameState.timeLeft--;
+                timerEl.textContent = `⏱️ ${gameState.timeLeft}秒`;
+
+                // 时间紧迫提醒
+                if (gameState.timeLeft <= 30) {
+                    timerEl.style.background = 'rgba(231,76,60,0.15)';
+                }
+                if (gameState.timeLeft <= 10) {
+                    timerEl.style.animation = 'scoreAdd 0.5s ease';
+                    setTimeout(() => timerEl.style.animation = '', 500);
+                }
+
+                if (gameState.timeLeft <= 0) {
+                    endGame(gameState.score >= CONFIG.targetScore);
+                }
+            }, 1000);
+
+            // 开始泡泡生成
+            BubbleManager.start();
+        }
+
+        function endGame(won) {
+            gameState.running = false;
+            clearInterval(gameState.timerInterval);
+            gameState.timerInterval = null;
+            BubbleManager.stop();
+
+            // 关闭可能打开的选择弹窗
+            choiceModal.classList.remove('show');
+
+            overlay.classList.remove('hidden');
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultScore = document.getElementById('resultScore');
+
+            if (won) {
+                resultIcon.textContent = '🎉';
+                resultTitle.textContent = '老师回来了，你是一个合格的班长！';
+                resultTitle.className = 'result-title win';
+            } else {
+                resultIcon.textContent = '😢';
+                resultTitle.textContent = '老师回来了，班级一片混乱，你被撤职了！';
+                resultTitle.className = 'result-title lose';
+            }
+
+            resultScore.textContent = `最终得分: ${gameState.score}分 / 目标: ${CONFIG.targetScore}分`;
+
+            // 重置计时器样式
+            timerEl.style.background = '';
+            timerEl.style.animation = '';
+        }
+
+        // ============ 弹窗外部点击关闭 ============
+        choiceModal.addEventListener('click', (e) => {
+            if (e.target === choiceModal) {
+                choiceModal.classList.remove('show');
+                currentChoiceStudentId = null;
+                currentChoiceEvent = null;
+            }
+        });
+
+        // ============ 初始化 ============
+        initDesks();
+    </script>
+</body>
+</html>
