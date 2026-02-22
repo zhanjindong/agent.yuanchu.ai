@@ -45,10 +45,10 @@
             left: 50%;
             transform: translateX(-50%);
             width: 60%;
-            height: 25%;
+            height: 22%;
             background: linear-gradient(180deg, #2d5a27 0%, #1e3d1a 100%);
             border-radius: 8px;
-            border: 8px solid #8b4513;
+            border: clamp(4px, 0.8vw, 8px) solid #8b4513;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -66,23 +66,33 @@
         /* 课桌区域 */
         #desks {
             position: absolute;
-            top: 35%;
+            top: 32%;
             left: 5%;
             width: 90%;
-            height: 60%;
+            height: 55%;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(5, 1fr);
-            gap: 10px;
+            gap: clamp(3px, 1vw, 10px);
         }
         
         .desk {
             background: linear-gradient(180deg, #d4a574 0%, #c4956a 100%);
-            border-radius: 8px;
-            border: 3px solid #8b6914;
-            box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
+            border-radius: clamp(4px, 0.8vw, 8px);
+            border: clamp(1px, 0.4vw, 3px) solid #8b6914;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
         }
         
+        /* 学生容器 */
+        #students {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
         /* 学生 */
         .student {
             position: absolute;
@@ -92,10 +102,12 @@
             cursor: pointer;
             transition: transform 0.2s;
             z-index: 10;
+            transform: translate(-50%, -30%);
+            pointer-events: auto;
         }
-        
+
         .student:hover {
-            transform: scale(1.1);
+            transform: translate(-50%, -30%) scale(1.1);
         }
         
         .bubble {
@@ -104,12 +116,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: clamp(20px, 4vw, 32px);
+            font-size: clamp(16px, 3.5vw, 28px);
             box-shadow: 0 3px 10px rgba(0,0,0,0.2);
             border: 2px solid #ddd;
             animation: bubbleFloat 2s ease-in-out infinite;
-            width: clamp(36px, 6vw, 50px);
-            height: clamp(36px, 6vw, 50px);
+            width: clamp(28px, 5vw, 45px);
+            height: clamp(28px, 5vw, 45px);
         }
         
         @keyframes bubbleFloat {
@@ -118,14 +130,14 @@
         }
         
         .student-body {
-            width: clamp(30px, 5vw, 45px);
-            height: clamp(35px, 6vw, 55px);
+            width: clamp(24px, 4vw, 40px);
+            height: clamp(28px, 5vw, 48px);
             border-radius: 50% 50% 45% 45%;
             margin-top: -5px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: clamp(12px, 2vw, 16px);
+            font-size: clamp(10px, 1.8vw, 14px);
             color: white;
             font-weight: bold;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
@@ -537,32 +549,27 @@
         function initStudents() {
             studentsContainer.innerHTML = '';
             gameState.students = [];
-            
-            const deskRect = document.getElementById('desks').getBoundingClientRect();
-            const classroomRect = classroom.getBoundingClientRect();
-            
+
+            const desksEl = document.getElementById('desks');
+            const desksLeft = desksEl.offsetLeft;
+            const desksTop = desksEl.offsetTop;
+            const desksWidth = desksEl.offsetWidth;
+            const desksHeight = desksEl.offsetHeight;
+
+            const cellWidth = desksWidth / CONFIG.deskCols;
+            const cellHeight = desksHeight / CONFIG.deskRows;
+
             for (let i = 0; i < CONFIG.totalStudents; i++) {
                 const row = Math.floor(i / CONFIG.deskCols);
                 const col = i % CONFIG.deskCols;
-                
+
                 const student = {
                     id: i,
                     state: getRandomState(),
-                    x: 0,
-                    y: 0
+                    x: desksLeft + col * cellWidth + cellWidth / 2,
+                    y: desksTop + row * cellHeight + cellHeight / 2
                 };
-                
-                // 计算位置（围绕课桌）
-                const deskWidth = deskRect.width / CONFIG.deskCols;
-                const deskHeight = deskRect.height / CONFIG.deskRows;
-                
-                student.x = classroomRect.left + 50 + col * (deskWidth + 5) + deskWidth / 2;
-                student.y = classroomRect.top + deskRect.top + row * deskHeight + deskHeight / 2 + 30;
-                
-                // 随机偏移
-                student.x += (Math.random() - 0.5) * 20;
-                student.y += (Math.random() - 0.5) * 15;
-                
+
                 gameState.students.push(student);
                 createStudentElement(student);
             }
@@ -638,10 +645,10 @@
                 const btn = document.createElement('button');
                 btn.className = `choice-btn choice-${choice.type}`;
 
-                // 每个选项随机1-3分
-                const points = getRandomPoints();
+                const points = choice.pointsType === 'random' ? getRandomPoints() : choice.points;
+                const pointsText = points > 0 ? `+${points}` : `${points}`;
 
-                btn.innerHTML = `${choice.text} <span class="points">+${points}分</span>`;
+                btn.innerHTML = `${choice.text} <span class="points">${pointsText}分</span>`;
                 btn.onclick = () => handleChoice(choice, points);
                 choicesContainer.appendChild(btn);
             });
