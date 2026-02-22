@@ -637,18 +637,11 @@
             state.choices.forEach(choice => {
                 const btn = document.createElement('button');
                 btn.className = `choice-btn choice-${choice.type}`;
-                
-                // 计算实际分数
-                let points = choice.points;
-                let pointsText = points;
-                if (choice.pointsType === 'random') {
-                    points = getRandomPoints();
-                    pointsText = `+${points}`;
-                } else if (points > 0) {
-                    pointsText = `+${points}`;
-                }
-                
-                btn.innerHTML = `${choice.text} <span class="points">${pointsText}分</span>`;
+
+                // 每个选项随机1-3分
+                const points = getRandomPoints();
+
+                btn.innerHTML = `${choice.text} <span class="points">+${points}分</span>`;
                 btn.onclick = () => handleChoice(choice, points);
                 choicesContainer.appendChild(btn);
             });
