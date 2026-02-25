@@ -6,5 +6,6 @@
   { "file": "crazy-zombie.html", "title": "疯狂僵尸", "icon": "🧟" },
   { "file": "drift-racing.html", "title": "漂移赛车", "icon": "🏎️" },
   { "file": "sailboat-sprint.html", "title": "帆船冲刺", "icon": "⛵" },
-  { "file": "class-monitor.html", "title": "我是班长", "icon": "🏫" }
+  { "file": "class-monitor.html", "title": "我是班长", "icon": "🏫" },
+  { "file": "snake.html", "title": "贪吃蛇", "icon": "🐍" }
 ]
