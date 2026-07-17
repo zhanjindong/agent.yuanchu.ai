@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保卫长城</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #8B4513 50%, #654321 100%);
+            min-height: 100vh;
+            font-family: 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #333;
+            font-size: 16px;
+            background: rgba(255,255,255,0.8);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        #weaponPanel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .weapon-btn {
+            padding: 12px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            transition: all 0.3s;
+        }
+        
+        .weapon-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .weapon-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .weapon-btn.generating {
+            background: #FF9800;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        #gameOver, #victory {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 40px 60px;
+            border-radius: 16px;
+            text-align: center;
+            display: none;
+        }
+        
+        #gameOver h1, #victory h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        #restartBtn {
+            padding: 15px 40px;
+            font-size: 18px;
+            background: #FF5722;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        #restartBtn:hover {
+            background: #E64A19;
+        }
+        
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        #startScreen h1 {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+        
+        #startScreen p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.8;
+        }
+        
+        #startBtn {
+            padding: 20px 60px;
+            font-size: 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        #startBtn:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="ui">
+            <div>轮次: <span id="round">1</span>/10</div>
+            <div>得分: <span id="score">0</span></div>
+            <div>长城生命: <span id="health">100</span>%</div>
+        </div>
+        
+        <div id="weaponPanel">
+            <button class="weapon-btn" id="arrowBtn" onclick="startGenerate('arrow')">
+                🏹 射箭 (10秒)
+            </button>
+            <button class="weapon-btn" id="stoneBtn" onclick="startGenerate('stone')">
+                🪨 投石 (20秒)
+            </button>
+            <button class="weapon-btn" id="cannonBtn" onclick="startGenerate('cannon')">
+                💣 大炮 (50秒)
+            </button>
+        </div>
+        
+        <div id="startScreen">
+            <h1>🏰 保卫长城</h1>
+            <p>
+                游戏说明：<br>
+                1. 点击下方按钮生成武器<br>
+                2. 武器生成完毕后，点击长城上的放置区域放置武器<br>
+                3. 武器会自动攻击入侵的恐龙<br>
+                4. 抵御10轮恐龙进攻，保卫长城！
+            </p>
+            <button id="startBtn" onclick="startGame()">开始游戏</button>
+        </div>
+        
+        <div id="gameOver">
+            <h1>💀 失败</h1>
+            <p>长城已被恐龙攻陷...</p>
+            <button id="restartBtn" onclick="restartGame()">重新开始</button>
+        </div>
+        
+        <div id="victory">
+            <h1>🏆 胜利</h1>
+            <p>恭喜你成功保卫了长城！</p>
+            <button id="restartBtn2" onclick="restartGame()">再玩一次</button>
+        </div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameRunning = false;
+        let currentRound = 1;
+        let score = 0;
+        let health = 100;
+        let weapons = [];
+        let enemies = [];
+        let projectiles = [];
+        let weaponQueue = [];
+        let generatingWeapon = null;
+        
+        // 武器配置
+        const weaponConfig = {
+            arrow: { name: '射箭', time: 10000, damage: 20, range: 400, speed: 8, color: '#FFD700', size: 8 },
+            stone: { name: '投石', time: 20000, damage: 50, range: 300, speed: 5, color: '#8B4513', size: 15 },
+            cannon: { name: '大炮', time: 50000, damage: 100, range: 500, speed: 6, color: '#FF4500', size: 20 }
+        };
+        
+        // 长城位置
+        let wallX;
+        let wallTop, wallBottom;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            wallX = canvas.width - 150;
+            wallTop = canvas.height * 0.5;
+            wallBottom = canvas.height - 50;
+        }
+        
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            gameRunning = true;
+            currentRound = 1;
+            score = 0;
+            health = 100;
+            weapons = [];
+            enemies = [];
+            projectiles = [];
+            weaponQueue = [];
+            generatingWeapon = null;
+            updateUI();
+            spawnEnemyWave();
+            gameLoop();
+        }
+        
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('victory').style.display = 'none';
+            startGame();
+        }
+        
+        function updateUI() {
+            document.getElementById('round').textContent = currentRound;
+            document.getElementById('score').textContent = score;
+            document.getElementById('health').textContent = health;
+        }
+        
+        function startGenerate(type) {
+            if (generatingWeapon) return;
+            
+            const config = weaponConfig[type];
+            const btn = document.getElementById(type + 'Btn');
+            
+            generatingWeapon = { type, progress: 0 };
+            btn.classList.add('generating');
+            btn.textContent = `生成中... 0%`;
+            
+            const startTime = Date.now();
+            const generateTimer = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                generatingWeapon.progress = elapsed / config.time * 100;
+                btn.textContent = `生成中... ${Math.min(100, Math.floor(generatingWeapon.progress))}%`;
+                
+                if (generatingWeapon.progress >= 100) {
+                    clearInterval(generateTimer);
+                    btn.classList.remove('generating');
+                    weaponQueue.push(type);
+                    generatingWeapon = null;
+                    btn.textContent = getButtonText(type);
+                    showPlacedWeapon(type);
+                }
+            }, 50);
+        }
+        
+        function getButtonText(type) {
+            const texts = {
+                arrow: '🏹 射箭 (10秒)',
+                stone: '🪨 投石 (20秒)',
+                cannon: '💣 大炮 (50秒)'
+            };
+            return texts[type];
+        }
+        
+        function showPlacedWeapon(type) {
+            const config = weaponConfig[type];
+            const y = wallTop + 50 + weapons.length * 60;
+            
+            if (weapons.length < 5) {
+                weapons.push({
+                    type,
+                    x: wallX - 40,
+                    y: y,
+                    config: config,
+                    lastShot: 0,
+                    angle: Math.PI
+                });
+            }
+        }
+        
+        function spawnEnemyWave() {
+            if (!gameRunning) return;
+            
+            const baseCount = 5 + currentRound * 2;
+            let spawned = 0;
+            
+            const spawnTimer = setInterval(() => {
+                if (!gameRunning || spawned >= baseCount) {
+                    clearInterval(spawnTimer);
+                    return;
+                }
+                
+                const size = 20 + Math.random() * 15;
+                enemies.push({
+                    x: -size,
+                    y: wallTop + 30 + Math.random() * (wallBottom - wallTop - 60),
+                    size: size,
+                    speed: 0.5 + currentRound * 0.15 + Math.random() * 0.3,
+                    hp: 20 + currentRound * 10,
+                    maxHp: 20 + currentRound * 10
+                });
+                spawned++;
+            }, 800 - currentRound * 50);
+            
+            // 下一轮
+            setTimeout(() => {
+                if (gameRunning && enemies.length === 0 && currentRound < 10) {
+                    currentRound++;
+                    updateUI();
+                    spawnEnemyWave();
+                } else if (gameRunning && enemies.length === 0 && currentRound === 10) {
+                    // 胜利
+                    gameRunning = false;
+                    document.getElementById('victory').style.display = 'block';
+                }
+            }, 20000 + currentRound * 3000);
+        }
+        
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawBackground();
+            drawWall();
+            drawWeapons();
+            drawEnemies();
+            drawProjectiles();
+            
+            updateGame();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function drawBackground() {
+            // 天空
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, wallTop);
+            
+            // 地面
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, wallTop, canvas.width, wallBottom - wallTop);
+            
+            // 草地
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, wallTop, canvas.width, 20);
+            
+            // 山
+            ctx.fillStyle = '#6B8E23';
+            for (let i = 0; i < 5; i++) {
+                const x = i * 200 + 50;
+                const h = 80 + Math.random() * 60;
+                ctx.beginPath();
+                ctx.moveTo(x, wallTop + 20);
+                ctx.lineTo(x + 80, wallTop + 20 - h);
+                ctx.lineTo(x + 160, wallTop + 20);
+                ctx.fill();
+            }
+        }
+        
+        function drawWall() {
+            // 长城主体
+            const gradient = ctx.createLinearGradient(wallX, 0, wallX + 150, 0);
+            gradient.addColorStop(0, '#8B0000');
+            gradient.addColorStop(0.5, '#A52A2A');
+            gradient.addColorStop(1, '#8B0000');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(wallX, wallTop, 150, wallBottom - wallTop);
+            
+            // 城垛
+            ctx.fillStyle = '#8B0000';
+            for (let i = 0; i < 8; i++) {
+                const y = wallTop + i * 35;
+                ctx.fillRect(wallX - 10, y, 20, 25);
+                ctx.fillRect(wallX + 140, y, 20, 25);
+            }
+            
+            // 旗帜
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.moveTo(wallX + 75, wallTop - 30);
+            ctx.lineTo(wallX + 75, wallTop);
+            ctx.lineTo(wallX + 100, wallTop - 15);
+            ctx.lineTo(wallX + 75, wallTop - 10);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.moveTo(wallX + 75, wallTop - 30);
+            ctx.lineTo(wallX + 120, wallTop - 20);
+            ctx.lineTo(wallX + 75, wallTop - 10);
+            ctx.fill();
+        }
+        
+        function drawWeapons() {
+            weapons.forEach(weapon => {
+                ctx.save();
+                ctx.translate(weapon.x, weapon.y);
+                
+                if (weapon.type === 'arrow') {
+                    // 射箭塔
+                    ctx.fillStyle = '#DEB887';
+                    ctx.fillRect(-15, -30, 30, 40);
+                    ctx.fillStyle = '#8B4513';
+                    ctx.beginPath();
+                    ctx.arc(0, -35, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (weapon.type === 'stone') {
+                    // 投石车
+                    ctx.fillStyle = '#A0522D';
+                    ctx.fillRect(-20, -25, 40, 35);
+                    ctx.strokeStyle = '#654321';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(-15, -25);
+                    ctx.lineTo(0, -50);
+                    ctx.lineTo(15, -25);
+                    ctx.stroke();
+                } else {
+                    // 大炮
+                    ctx.fillStyle = '#2F4F4F';
+                    ctx.fillRect(-20, -20, 40, 30);
+                    ctx.fillStyle = '#1a1a1a';
+                    ctx.beginPath();
+                    ctx.arc(0, -20, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(-8, -45, 16, 30);
+                }
+                
+                ctx.restore();
+            });
+        }
+        
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.save();
+                ctx.translate(enemy.x, enemy.y);
+                
+                // 身体
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, enemy.size * 1.2, enemy.size, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 头部
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.arc(enemy.size * 0.8, -enemy.size * 0.3, enemy.size * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 眼睛
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.arc(enemy.size * 0.9, -enemy.size * 0.4, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 尾巴
+                ctx.strokeStyle = '#228B22';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(-enemy.size, 0);
+                ctx.lineTo(-enemy.size * 1.8, -10);
+                ctx.stroke();
+                
+                // 血条
+                const hpPercent = enemy.hp / enemy.maxHp;
+                ctx.fillStyle = '#333';
+                ctx.fillRect(-enemy.size, -enemy.size * 1.8, enemy.size * 2, 5);
+                ctx.fillStyle = hpPercent > 0.5 ? '#00FF00' : '#FF0000';
+                ctx.fillRect(-enemy.size, -enemy.size * 1.8, enemy.size * 2 * hpPercent, 5);
+                
+                ctx.restore();
+            });
+        }
+        
+        function drawProjectiles() {
+            projectiles.forEach(proj => {
+                ctx.save();
+                ctx.translate(proj.x, proj.y);
+                
+                if (proj.type === 'arrow') {
+                    ctx.fillStyle = proj.color;
+                    ctx.beginPath();
+                    ctx.moveTo(10, 0);
+                    ctx.lineTo(-5, -3);
+                    ctx.lineTo(-5, 3);
+                    ctx.fill();
+                } else if (proj.type === 'stone') {
+                    ctx.fillStyle = proj.color;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, proj.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // 炮弹
+                    ctx.fillStyle = '#1a1a1a';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, proj.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#FF4500';
+                    ctx.beginPath();
+                    ctx.arc(-3, -3, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            });
+        }
+        
+        function updateGame() {
+            // 更新敌人
+            enemies.forEach(enemy => {
+                enemy.x += enemy.speed;
+                
+                // 攻击长城
+                if (enemy.x >= wallX) {
+                    health -= 5;
+                    enemy.hp = 0;
+                    updateUI();
+                    
+                    if (health <= 0) {
+                        gameRunning = false;
+                        document.getElementById('gameOver').style.display = 'block';
+                    }
+                }
+            });
+            
+            // 移除死亡敌人
+            enemies = enemies.filter(e => e.hp > 0);
+            
+            // 武器攻击
+            const now = Date.now();
+            weapons.forEach(weapon => {
+                if (now - weapon.lastShot > 1500) {
+                    // 找最近的敌人
+                    let target = null;
+                    let minDist = Infinity;
+                    
+                    enemies.forEach(enemy => {
+                        const dist = Math.sqrt(
+                            Math.pow(enemy.x - weapon.x, 2) + 
+                            Math.pow(enemy.y - weapon.y, 2)
+                        );
+                        if (dist < weapon.config.range && dist < minDist) {
+                            minDist = dist;
+                            target = enemy;
+                        }
+                    });
+                    
+                    if (target) {
+                        const angle = Math.atan2(target.y - weapon.y, target.x - weapon.x);
+                        projectiles.push({
+                            x: weapon.x,
+                            y: weapon.y - 20,
+                            vx: Math.cos(angle) * weapon.config.speed,
+                            vy: Math.sin(angle) * weapon.config.speed,
+                            damage: weapon.config.damage,
+                            type: weapon.type,
+                            size: weapon.config.size,
+                            color: weapon.config.color
+                        });
+                        weapon.lastShot = now;
+                    }
+                }
+            });
+            
+            // 更新投射物
+            projectiles.forEach(proj => {
+                proj.x += proj.vx;
+                proj.y += proj.vy;
+                
+                // 检测碰撞
+                enemies.forEach(enemy => {
+                    const dist = Math.sqrt(
+                        Math.pow(enemy.x - proj.x, 2) + 
+                        Math.pow(enemy.y - proj.y, 2)
+                    );
+                    if (dist < enemy.size + proj.size) {
+                        enemy.hp -= proj.damage;
+                        proj.hit = true;
+                        score += 10;
+                        updateUI();
+                    }
+                });
+            });
+            
+            // 移除命中或出界的投射物
+            projectiles = projectiles.filter(p => !p.hit && p.x > 0 && p.x < canvas.width && p.y > 0);
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+    </script>
+</body>
+</html>
